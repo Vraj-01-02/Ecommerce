@@ -4,7 +4,6 @@ import { ShopContext } from "../context/ShopContext";
 import { useContext,useState } from "react";
 import { products, assets } from "../assets/assets";
 
-
 const Product = () => {
   const { productId } = useParams();
   const { products } = useContext(ShopContext);
