@@ -73,6 +73,8 @@ import contact_img from './contact_img.png'
 import razorpay_logo from './razorpay_logo.png'
 import stripe_logo from './stripe_logo.png'
 import cross_icon from './cross_icon.png'
+import { useEffect } from 'react'
+import Product from '../pages/Product'
 
 export const assets = {
     logo,
