@@ -1,26 +1,28 @@
-import React, { useContext } from 'react'
-import { ShopContext } from '../context/ShopContext'
+import React, { useContext } from 'react';
+import { ShopContext } from '../context/ShopContext';
 import { Link } from 'react-router-dom';
 
-const ProductItem = ({id,image,name,price}) => {
-  const {currency} = useContext(ShopContext);
-
-  // Defensive: handle missing or malformed image prop
-  const imageUrl = Array.isArray(image) && image.length > 0 ? image[0] : '';
+const ProductItem = ({ id, image, name, price }) => {
+  const { currency } = useContext(ShopContext);
 
   return (
-    <Link className='text-gray-700 cursor-pointer' to={`/product/${id}`}>
-      <div className='overflow-hidden'>
-        {imageUrl ? (
-          <img className='hover:scale-110 transition ease-in-out' src={imageUrl} alt={name || ''} />
-        ) : (
-          <div className='w-full h-32 bg-gray-200 flex items-center justify-center text-xs text-gray-500'>No Image</div>
-        )}
+    <Link to={`/product/${id}`} className="text-gray-700 cursor-pointer">
+      <div className="overflow-hidden">
+        <img
+          src={image}
+          alt={name}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "https://via.placeholder.com/300x300?text=No+Image";
+          }}
+          className="hover:scale-110 transition ease-in-out w-full h-48 object-cover"
+        />
       </div>
-      <p className='pt-3 pb-1 text-sm'>{name}</p>
-      <p className='text-sm font-medium'>{currency}{price}</p>
-    </Link>
-  )
-}
 
-export default ProductItem
+      <p className="pt-3 pb-1 text-sm">{name}</p>
+      <p className="text-sm font-medium">{currency}{price}</p>
+    </Link>
+  );
+};
+
+export default ProductItem;

@@ -6,6 +6,7 @@ import ProductItem from './ProductItem';
 const BestSeller = () => {
     const {products} = useContext (ShopContext); 
     const [bestSeller, setBestSeller] = useState([]); 
+    
     useEffect(()=>{ 
         const bestProduct = products.filter((item)=>(item.bestseller)); 
         setBestSeller (bestProduct.slice(0,5)) 
@@ -18,10 +19,19 @@ const BestSeller = () => {
        Our most loved products chosen by customers for quality, comfort, and style.
 Shop the best sellers that everyone is talking about.
 </p>
+
+
       </div>
       <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 gap-y-6'>
         {bestSeller.map((item, index) => (
-          <ProductItem key={index} id={item._id} image={item.image} name={item.name} price={item.price} />
+          <ProductItem
+  key={item._id}
+  id={item._id}
+  image={item.images && item.images.length > 0 ? item.images[0] : ""}
+  name={item.name}
+  price={item.price}
+/>
+
         ))}
       </div>
     </div>
