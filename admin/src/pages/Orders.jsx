@@ -1,129 +1,175 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
-import { backendUrl, currency } from '../App'
-import { toast } from 'react-toastify'
-import { assets } from '../assets/assets'
+import React, { useEffect, useState } from "react";
+import api from "../utils/api";
+import { currency } from "../App";
+import { toast } from "react-toastify";
+import { assets } from "../assets/assets";
 
-const Orders = ({ token }) => {
-  const [orders, setOrders] = useState([])
-  const [loadingId, setLoadingId] = useState(null)
+/* ================== STATUS HELPERS ================== */
 
-  // Fetch all orders
+const statusColor = {
+  "Order Placed": "bg-gray-200 text-gray-700",
+  Packing: "bg-yellow-200 text-yellow-800",
+  Shipped: "bg-blue-200 text-blue-800",
+  "Out for Delivery": "bg-purple-200 text-purple-800",
+  Delivered: "bg-green-200 text-green-800",
+};
+
+const statusSteps = [
+  "Order Placed",
+  "Packing",
+  "Shipped",
+  "Out for Delivery",
+  "Delivered",
+];
+
+/* ================== COMPONENT ================== */
+
+const Orders = () => {
+  const [orders, setOrders] = useState([]);
+  const [loadingId, setLoadingId] = useState(null);
+
   const fetchAllOrders = async () => {
-    if (!token) return
-
     try {
-      const response = await axios.post(
-        `${backendUrl}/api/order/list`,
-        {},
-        { headers: { token } }
-      )
+      const res = await api.post("/api/order/list");
 
-      if (response.data.success) {
-        setOrders(response.data.orders)
-      } else {
-        toast.error(response.data.message)
+      if (res.data.success) {
+        setOrders([...res.data.orders].reverse());
       }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Something went wrong')
+    } catch {
+      toast.error("Failed to load orders");
     }
-  }
+  };
 
-  // Update order status
-  const statusHandler = async (event, orderId) => {
-    const newStatus = event.target.value
-    setLoadingId(orderId)
+  const statusHandler = async (e, orderId) => {
+    const newStatus = e.target.value;
+    if (!window.confirm(`Change status to "${newStatus}"?`)) return;
+
+    setLoadingId(orderId);
 
     try {
-      const response = await axios.post(
-        `${backendUrl}/api/order/status`,
-        { orderId, status: newStatus },
-        { headers: { token } }
-      )
+      const res = await api.post("/api/order/status", {
+        orderId,
+        status: newStatus,
+      });
 
-      if (response.data.success) {
-        toast.success('Order status updated')
-        fetchAllOrders()
-      } else {
-        toast.error(response.data.message)
+      if (res.data.success) {
+        toast.success("Order status updated");
+        fetchAllOrders();
       }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update status')
+    } catch {
+      toast.error("Status update failed");
     } finally {
-      setLoadingId(null)
+      setLoadingId(null);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchAllOrders()
-  }, [token])
+    fetchAllOrders();
+  }, []);
 
   return (
-    <div>
-      <h3 className="text-xl font-semibold mb-4">Orders</h3>
-
-      {orders.map(order => (
-        <div
-          key={order._id}
-          className="grid grid-cols-1 sm:grid-cols-[0.5fr_2fr_1fr] 
-          lg:grid-cols-[0.5fr_2fr_1fr_1fr_1fr] 
-          gap-3 items-start border-2 border-gray-300 
-          p-5 md:p-8 my-3 text-xs sm:text-sm text-gray-700"
-        >
-          {/* Icon */}
-          <img className="w-12" src={assets.parcel_icon} alt="Parcel" />
-
-          {/* Items + Address */}
-          <div>
-            {order.items.map((item, idx) => (
-              <p key={idx} className="py-0.5">
-                {item.name} × {item.quantity} ({item.size})
-              </p>
-            ))}
-
-            <p className="mt-3 mb-2 font-medium">
-              {order.address.firstName} {order.address.lastName}
-            </p>
-
-            <p>{order.address.street}</p>
-            <p>
-              {order.address.city}, {order.address.state},{' '}
-              {order.address.country} - {order.address.zipcode}
-            </p>
-
-            <p>{order.address.phone}</p>
-          </div>
-
-          {/* Meta */}
-          <div>
-            <p className='text-sm sm:text-[15px]'>Items: {order.items.length}</p>
-            <p className="mt-3 ">Method: {order.paymentMethod}</p>
-            <p>Payment: {order.payment ? 'Done' : 'Pending'}</p>
-            <p>Date: {new Date(order.date).toLocaleDateString()}</p>
-          </div>
-
-          {/* Amount */}
-          <p className="text-sm sm:text-[15]">
-            {currency}{order.amount}
-          </p>
-
-          {/* Status */}
-          <select
-            value={order.status}
-            disabled={loadingId === order._id}
-            onChange={(e) => statusHandler(e, order._id)}
-            className="p-2 font-semibold border"
-          >
-            <option value="Order Placed">Order Placed</option>
-            <option value="Packing">Packing</option>
-            <option value="Shipped">Shipped</option>
-            <option value="Out for Delivery">Out for Delivery</option>
-            <option value="Delivered">Delivered</option>
-          </select>
+    <div className="flex w-full min-w-0">
+      <div className="flex-1 min-w-0 sm:px-6 pb-10">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="text-xl sm:text-2xl font-semibold">Orders</h2>
+          <p className="text-sm text-gray-500">Total: {orders.length}</p>
         </div>
-      ))}
-    </div>
-  )
-}
 
-export default Orders
+        {orders.length === 0 && (
+          <p className="text-gray-500">
+            No orders yet. Once customers place orders, they’ll appear here.
+          </p>
+        )}
+
+        {orders.map((order) => (
+          <div
+            key={order._id}
+            className="bg-white border rounded-xl p-4 sm:p-6 mb-6 shadow-sm hover:shadow-md transition"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="break-all">
+                <p className="text-xs text-gray-500">Order ID</p>
+                <span className="font-mono text-xs sm:text-sm">
+                  {order._id}
+                </span>
+              </div>
+
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  statusColor[order.status]
+                }`}
+              >
+                {order.status}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              {statusSteps.map((step) => (
+                <span
+                  key={step}
+                  className={`px-2 py-1 text-xs rounded-full ${
+                    statusSteps.indexOf(step) <=
+                    statusSteps.indexOf(order.status)
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {step}
+                </span>
+              ))}
+            </div>
+
+            <hr className="my-4" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[2fr_1.2fr_1fr_1fr] gap-6">
+              <div>
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="flex gap-3 mb-3">
+                    <img
+                      src={item.images?.[0] || assets.parcel_icon}
+                      className="w-12 h-12 object-cover rounded border"
+                      alt={item.name}
+                    />
+                    <p className="text-sm">
+                      {item.name} × {item.quantity} ({item.size})
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-sm space-y-1">
+                <p>Items: {order.items.length}</p>
+                <p>Method: {order.paymentMethod}</p>
+                <p>Date: {new Date(order.date).toLocaleDateString()}</p>
+              </div>
+
+              <div className="text-sm space-y-1">
+                <p className="text-lg font-semibold">
+                  Total: {currency}
+                  {order.amount}
+                </p>
+              </div>
+
+              <div>
+                <select
+                  value={order.status}
+                  disabled={loadingId === order._id}
+                  onChange={(e) => statusHandler(e, order._id)}
+                  className="w-full p-2 border rounded font-semibold"
+                >
+                  {statusSteps.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Orders;
