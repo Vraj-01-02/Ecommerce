@@ -8,14 +8,12 @@ dotenv.config();
 
 const currency = "inr";
 const deliveryCharge = 40;
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ================= COD ORDER =================
 const placeOrder = async(req, res) => {
     try {
         const userId = req.user.id;
-
         const { items, amount, address } = req.body;
 
         const newOrder = new orderModel({
@@ -31,16 +29,18 @@ const placeOrder = async(req, res) => {
         await newOrder.save();
         await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
-        // 🔔 NOTIFICATION
+        // 🔔 SMART NOTIFICATION
         await notificationModel.create({
-            type: "NEW_ORDER",
-            message: "New COD order placed",
-            orderId: newOrder._id,
+            type: "order",
+            message: `🛒 New COD order placed (#${newOrder._id
+        .toString()
+        .slice(-6)})`,
+            link: "/order",
+            referenceId: newOrder._id,
         });
 
         res.json({ success: true, message: "Order Placed" });
     } catch (error) {
-        console.log(error);
         res.json({ success: false, message: error.message });
     }
 };
@@ -64,11 +64,14 @@ const placeOrderStripe = async(req, res) => {
 
         await newOrder.save();
 
-        // 🔔 NOTIFICATION
+        // 🔔 SMART NOTIFICATION
         await notificationModel.create({
-            type: "NEW_ORDER",
-            message: "New Stripe order placed",
-            orderId: newOrder._id,
+            type: "order",
+            message: `💳 New Stripe order placed (#${newOrder._id
+        .toString()
+        .slice(-6)})`,
+            link: "/order",
+            referenceId: newOrder._id,
         });
 
         const line_items = items.map((item) => ({
@@ -98,7 +101,6 @@ const placeOrderStripe = async(req, res) => {
 
         res.json({ success: true, session_url: session.url });
     } catch (error) {
-        console.log(error);
         res.json({ success: false, message: error.message });
     }
 };
@@ -109,10 +111,6 @@ const verifyStripe = async(req, res) => {
         const { orderId, success } = req.body;
         const userId = req.user.id;
 
-        if (!orderId) {
-            return res.json({ success: false, message: "orderId is required" });
-        }
-
         if (success === "true") {
             await orderModel.findByIdAndUpdate(orderId, { payment: true });
             await userModel.findByIdAndUpdate(userId, { cartData: {} });
@@ -122,7 +120,6 @@ const verifyStripe = async(req, res) => {
             res.json({ success: false });
         }
     } catch (error) {
-        console.log(error);
         res.json({ success: false, message: error.message });
     }
 };
@@ -130,8 +127,7 @@ const verifyStripe = async(req, res) => {
 // ================= USER ORDERS =================
 const userOrders = async(req, res) => {
     try {
-        const userId = req.user.id;
-        const orders = await orderModel.find({ userId });
+        const orders = await orderModel.find({ userId: req.user.id });
         res.json({ success: true, orders });
     } catch (error) {
         res.json({ success: false, message: error.message });

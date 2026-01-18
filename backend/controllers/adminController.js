@@ -40,7 +40,8 @@ export const updateAdminProfile = async(req, res) => {
         admin.email = email || admin.email;
 
         if (req.file) {
-            admin.avatar = `/uploads/${req.file.filename}`;
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
+            admin.avatar = `${baseUrl}/uploads/${req.file.filename}`;
         }
 
         await admin.save();
