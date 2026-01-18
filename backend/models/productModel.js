@@ -7,11 +7,14 @@ const productSchema = new mongoose.Schema({
     category: { type: String, required: true },
     subCategory: { type: String, required: true },
     sizes: { type: Array, required: true },
-    bestseller: { type: Boolean },
+    bestseller: { type: Boolean, default: false },
     images: { type: Array, required: true },
     date: { type: Number, required: true }
-})
+});
 
-const productModel = mongoose.models.product || mongoose.model("product", productSchema);
+/* ✅ THIS PART WAS MISSING — THIS IS WHY SERVER CRASHED */
 
-export default productModel;
+const Product =
+    mongoose.models.Product || mongoose.model("Product", productSchema);
+
+export default Product;
