@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import api from "../utils/api";
-
 import {
   User,
   Mail,
@@ -14,82 +13,56 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 
-/* ================= AUTH HEADER HELPER ================= */
-
-const authHeader = (token) => ({
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
-
-const AdminProfile = ({ token }) => {
+const AdminProfile = () => {
   const [admin, setAdmin] = useState(null);
   const [stats, setStats] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "" });
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    current: "",
-    new: "",
-  });
+  const [passwordForm, setPasswordForm] = useState({ current: "", new: "" });
   const [imageUploading, setImageUploading] = useState(false);
 
   /* ================= FETCH PROFILE ================= */
 
   const fetchAdminProfile = async () => {
     try {
-      const { data } = await api.get(
-        `/api/admin/profile`,
-        authHeader(token)
-      );
-
+      const { data } = await api.get("/api/admin/profile");
       if (data.success) {
         setAdmin(data.admin);
         setEditForm({ name: data.admin.name });
       }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to load profile");
+    } catch {
+      toast.error("Failed to load profile");
     }
   };
-
-  /* ================= FETCH STATS ================= */
 
   const fetchStats = async () => {
     try {
-      const { data } = await api.get(
-        `/api/admin/dashboard-stats`,
-        authHeader(token)
-      );
-      setStats(data);
-    } catch {
-      console.log("Stats not available");
-    }
+      const { data } = await api.get("/api/admin/dashboard-stats");
+      if (data.success) setStats(data);
+    } catch {}
   };
 
   useEffect(() => {
-    if (token) {
-      fetchAdminProfile();
-      fetchStats();
-    }
-  }, [token]);
+    fetchAdminProfile();
+    fetchStats();
+  }, []);
 
   /* ================= UPDATE PROFILE ================= */
 
   const handleUpdateProfile = async () => {
     try {
-      const { data } = await api.put(
-        `/api/admin/update-profile`,
-        { name: editForm.name },
-        authHeader(token)
-      );
+      const { data } = await api.put("/api/admin/profile", {
+        name: editForm.name,
+      });
 
       if (data.success) {
         toast.success("Profile updated");
         setAdmin(data.admin);
         setIsEditing(false);
       }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Update failed");
+    } catch {
+      toast.error("Update failed");
     }
   };
 
@@ -98,9 +71,8 @@ const AdminProfile = ({ token }) => {
   const handleChangePassword = async () => {
     try {
       const { data } = await api.put(
-        `/api/admin/change-password`,
-        passwordForm,
-        authHeader(token)
+        "/api/admin/change-password",
+        passwordForm
       );
 
       if (data.success) {
@@ -108,8 +80,8 @@ const AdminProfile = ({ token }) => {
         setShowPasswordModal(false);
         setPasswordForm({ current: "", new: "" });
       }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Password change failed");
+    } catch {
+      toast.error("Password change failed");
     }
   };
 
@@ -124,23 +96,14 @@ const AdminProfile = ({ token }) => {
 
     setImageUploading(true);
     try {
-      const { data } = await api.put(
-        `/api/admin/upload-avatar`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const { data } = await api.put("/api/admin/upload-avatar", formData);
 
       if (data.success) {
         toast.success("Profile photo updated");
         setAdmin(data.admin);
       }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Upload failed");
+    } catch {
+      toast.error("Upload failed");
     } finally {
       setImageUploading(false);
     }
@@ -149,37 +112,42 @@ const AdminProfile = ({ token }) => {
   if (!admin) return <div className="p-6">Loading...</div>;
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Admin Profile</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+        Admin Profile
+      </h1>
 
-      {/* PROFILE CARD */}
-      <div className="bg-white p-6 rounded-xl flex gap-6 border">
-        <div className="relative">
+      {/* ================= PROFILE CARD ================= */}
+      <div className="bg-white rounded-2xl border p-6 flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+        <div className="relative shrink-0">
           <img
             src={
-              admin.avatar
-                ? `${backendUrl}${admin.avatar}`
-                : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+              admin.avatar ||
+              "https://cdn-icons-png.flaticon.com/512/149/149071.png"
             }
-            className="w-24 h-24 rounded-full object-cover border"
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border shadow"
           />
-          <label className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow cursor-pointer">
+          <label className="absolute bottom-1 right-1 bg-white p-2 rounded-full shadow cursor-pointer">
             <Camera size={16} />
             <input type="file" hidden onChange={handleImageUpload} />
           </label>
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold">{admin.name}</h2>
-          <p className="text-gray-500">{admin.email}</p>
-          <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+        <div className="flex-1 text-center sm:text-left">
+          <h2 className="text-lg sm:text-xl font-semibold">
+            {admin.name}
+          </h2>
+          <p className="text-gray-500 text-sm sm:text-base break-all">
+            {admin.email}
+          </p>
+          <span className="inline-block mt-2 text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
             {admin.role}
           </span>
         </div>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* ================= STATS ================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard icon={Package} label="Products" value={stats.totalProducts} />
         <StatCard icon={ShoppingCart} label="Orders" value={stats.totalOrders} />
         <StatCard icon={Users} label="Users" value={stats.totalUsers} />
@@ -190,24 +158,29 @@ const AdminProfile = ({ token }) => {
         />
       </div>
 
-      {/* IDENTITY */}
-      <div className="bg-white rounded-xl border">
-        <div className="p-4 border-b font-semibold">Admin Identity</div>
+      {/* ================= IDENTITY ================= */}
+      <div className="bg-white rounded-2xl border overflow-hidden">
+        <div className="p-4 sm:p-5 border-b font-semibold text-gray-700">
+          Admin Identity
+        </div>
 
         {isEditing ? (
-          <div className="p-4 space-y-4">
+          <div className="p-5 space-y-4">
             <input
               value={editForm.name}
               onChange={(e) => setEditForm({ name: e.target.value })}
-              className="input"
+              className="w-full border rounded-lg p-2"
             />
-            <div className="flex gap-3">
-              <button onClick={handleUpdateProfile} className="btn-primary">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleUpdateProfile}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
+              >
                 Save
               </button>
               <button
                 onClick={() => setIsEditing(false)}
-                className="btn-secondary"
+                className="px-4 py-2 border rounded-lg"
               >
                 Cancel
               </button>
@@ -221,7 +194,7 @@ const AdminProfile = ({ token }) => {
             <div className="p-4 bg-gray-50">
               <button
                 onClick={() => setIsEditing(true)}
-                className="text-blue-600"
+                className="text-indigo-600 font-medium"
               >
                 Edit Profile
               </button>
@@ -230,16 +203,18 @@ const AdminProfile = ({ token }) => {
         )}
       </div>
 
-      {/* SECURITY */}
-      <div className="bg-white rounded-xl border">
-        <div className="p-4 border-b font-semibold">Security</div>
+      {/* ================= SECURITY ================= */}
+      <div className="bg-white rounded-2xl border overflow-hidden">
+        <div className="p-4 sm:p-5 border-b font-semibold text-gray-700">
+          Security
+        </div>
         <Row
           icon={<Lock size={18} />}
           label="Password"
           value={
             <button
               onClick={() => setShowPasswordModal(true)}
-              className="btn-primary"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
             >
               Change Password
             </button>
@@ -247,14 +222,14 @@ const AdminProfile = ({ token }) => {
         />
       </div>
 
-      {/* PASSWORD MODAL */}
+      {/* ================= PASSWORD MODAL ================= */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-96 space-y-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-sm space-y-4">
             <input
               type="password"
               placeholder="Current Password"
-              className="input"
+              className="w-full border rounded-lg p-2"
               onChange={(e) =>
                 setPasswordForm({ ...passwordForm, current: e.target.value })
               }
@@ -262,18 +237,21 @@ const AdminProfile = ({ token }) => {
             <input
               type="password"
               placeholder="New Password"
-              className="input"
+              className="w-full border rounded-lg p-2"
               onChange={(e) =>
                 setPasswordForm({ ...passwordForm, new: e.target.value })
               }
             />
-            <div className="flex gap-3">
-              <button onClick={handleChangePassword} className="btn-primary">
+            <div className="flex flex-col sm:flex-row gap-3 justify-end">
+              <button
+                onClick={handleChangePassword}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
+              >
                 Update
               </button>
               <button
                 onClick={() => setShowPasswordModal(false)}
-                className="btn-secondary"
+                className="px-4 py-2 border rounded-lg"
               >
                 Cancel
               </button>
@@ -288,22 +266,24 @@ const AdminProfile = ({ token }) => {
 /* ================= SMALL COMPONENTS ================= */
 
 const Row = ({ icon, label, value }) => (
-  <div className="flex items-center px-6 py-4 border-b last:border-0">
-    <div className="flex items-center gap-3 w-40 text-gray-600">
+  <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-5 py-4 border-b last:border-0">
+    <div className="flex items-center gap-3 w-full sm:w-40 text-gray-600">
       {icon} {label}
     </div>
-    <div className="font-medium">{value}</div>
+    <div className="font-medium text-gray-800 break-all">
+      {value}
+    </div>
   </div>
 );
 
 const StatCard = ({ icon: Icon, label, value }) => (
-  <div className="bg-white border rounded-xl p-5 flex items-center gap-4">
-    <div className="p-3 bg-blue-100 rounded-lg">
-      <Icon className="text-blue-600" />
+  <div className="bg-white border rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+    <div className="p-3 bg-indigo-100 rounded-xl">
+      <Icon className="text-indigo-600" />
     </div>
     <div>
       <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-lg font-bold">{value}</p>
+      <p className="text-lg font-bold text-gray-800">{value}</p>
     </div>
   </div>
 );
