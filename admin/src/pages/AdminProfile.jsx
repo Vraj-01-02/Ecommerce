@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 
 const AdminProfile = () => {
   const [admin, setAdmin] = useState(null);
+  const [role, setRole] = useState(""); // 🔥 ROLE STATE
   const [stats, setStats] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "" });
@@ -29,6 +30,7 @@ const AdminProfile = () => {
       const { data } = await api.get("/api/admin/profile");
       if (data.success) {
         setAdmin(data.admin);
+        setRole(data.admin.role); // 🔥 IMPORTANT
         setEditForm({ name: data.admin.name });
       }
     } catch {
@@ -134,9 +136,7 @@ const AdminProfile = () => {
         </div>
 
         <div className="flex-1 text-center sm:text-left">
-          <h2 className="text-lg sm:text-xl font-semibold">
-            {admin.name}
-          </h2>
+          <h2 className="text-lg sm:text-xl font-semibold">{admin.name}</h2>
           <p className="text-gray-500 text-sm sm:text-base break-all">
             {admin.email}
           </p>
@@ -151,11 +151,15 @@ const AdminProfile = () => {
         <StatCard icon={Package} label="Products" value={stats.totalProducts} />
         <StatCard icon={ShoppingCart} label="Orders" value={stats.totalOrders} />
         <StatCard icon={Users} label="Users" value={stats.totalUsers} />
-        <StatCard
-          icon={IndianRupee}
-          label="Revenue"
-          value={`₹${stats.totalRevenue}`}
-        />
+
+        {/* 🔥 REVENUE ONLY FOR SUPER ADMIN */}
+        {role === "SuperAdmin" && (
+          <StatCard
+            icon={IndianRupee}
+            label="Revenue"
+            value={`₹${stats.totalRevenue}`}
+          />
+        )}
       </div>
 
       {/* ================= IDENTITY ================= */}
@@ -242,7 +246,7 @@ const AdminProfile = () => {
                 setPasswordForm({ ...passwordForm, new: e.target.value })
               }
             />
-            <div className="flex flex-col sm:flex-row gap-3 justify-end">
+            <div className="flex gap-3 justify-end">
               <button
                 onClick={handleChangePassword}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
@@ -270,9 +274,7 @@ const Row = ({ icon, label, value }) => (
     <div className="flex items-center gap-3 w-full sm:w-40 text-gray-600">
       {icon} {label}
     </div>
-    <div className="font-medium text-gray-800 break-all">
-      {value}
-    </div>
+    <div className="font-medium text-gray-800 break-all">{value}</div>
   </div>
 );
 
