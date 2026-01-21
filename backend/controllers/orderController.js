@@ -1,6 +1,8 @@
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
-import notificationModel from "../models/notificationModel.js";
+import Notification from "../models/notificationModel.js";
+import logAdminActivity from "../utils/logAdminActivity.js";
+
 import Stripe from "stripe";
 import dotenv from "dotenv";
 
@@ -29,18 +31,20 @@ const placeOrder = async(req, res) => {
         await newOrder.save();
         await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
-        // 🔔 SMART NOTIFICATION
-        await notificationModel.create({
-            type: "order",
+        await Notification.create({
+            title: "New Order Received",
             message: `🛒 New COD order placed (#${newOrder._id
         .toString()
         .slice(-6)})`,
-            link: "/order",
+            forRole: "admin",
+            type: "order",
+            link: `/orders/${newOrder._id}`,
             referenceId: newOrder._id,
         });
 
         res.json({ success: true, message: "Order Placed" });
     } catch (error) {
+        console.error("COD Order Error:", error);
         res.json({ success: false, message: error.message });
     }
 };
@@ -64,13 +68,14 @@ const placeOrderStripe = async(req, res) => {
 
         await newOrder.save();
 
-        // 🔔 SMART NOTIFICATION
-        await notificationModel.create({
-            type: "order",
+        await Notification.create({
+            title: "New Order Received",
             message: `💳 New Stripe order placed (#${newOrder._id
         .toString()
         .slice(-6)})`,
-            link: "/order",
+            forRole: "admin",
+            type: "order",
+            link: `/orders/${newOrder._id}`,
             referenceId: newOrder._id,
         });
 
@@ -101,6 +106,7 @@ const placeOrderStripe = async(req, res) => {
 
         res.json({ success: true, session_url: session.url });
     } catch (error) {
+        console.error("Stripe Order Error:", error);
         res.json({ success: false, message: error.message });
     }
 };
@@ -144,17 +150,36 @@ const allOrders = async(req, res) => {
     }
 };
 
+// ================= 🔥 ADMIN UPDATE ORDER STATUS =================
 const updateStatus = async(req, res) => {
     try {
         const { orderId, status } = req.body;
-        await orderModel.findByIdAndUpdate(orderId, { status });
+
+        const order = await orderModel.findById(orderId);
+        if (!order) {
+            return res.json({ success: false, message: "Order not found" });
+        }
+
+        const oldStatus = order.status;
+
+        order.status = status;
+        await order.save();
+
+        // 🔥 ACTIVITY LOG (THIS WAS MISSING)
+        await logAdminActivity({
+            admin: req.admin,
+            action: "UPDATE_ORDER_STATUS",
+            description: `Updated order #${order._id
+        .toString()
+        .slice(-6)} from "${oldStatus}" to "${status}"`,
+        });
+
         res.json({ success: true, message: "Order Status Updated" });
     } catch (error) {
+        console.error("Update Status Error:", error);
         res.json({ success: false, message: error.message });
     }
 };
-
-const placeOrderRazorpay = async(req, res) => {};
 
 export {
     placeOrder,
@@ -163,5 +188,4 @@ export {
     userOrders,
     allOrders,
     updateStatus,
-    placeOrderRazorpay,
 };

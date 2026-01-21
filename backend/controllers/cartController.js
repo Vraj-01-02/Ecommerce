@@ -1,58 +1,89 @@
 import userModel from "../models/userModel.js";
 
-
-// add products to user cart
+// ================= ADD TO CART =================
 const addToCart = async(req, res) => {
     try {
-        const { userId, itemId, size } = req.body;
+        const userId = req.user.id; // 🔥 FROM JWT
+        const { itemId, size } = req.body;
+
         const userData = await userModel.findById(userId);
-        let cartData = await userData.cartData;
-        if (cartData[itemId]) {
-            if (cartData[itemId][size]) {
-                cartData[itemId][size] += 1;
-            } else {
-                cartData[itemId][size] = 1;
-            }
-        } else {
-            cartData[itemId] = {};
-            cartData[itemId][size] = 1;
+
+        if (!userData) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found. Please login again.",
+            });
         }
-        await userModel.findByIdAndUpdate(userId, { cartData })
+
+        let cartData = userData.cartData || {};
+
+        if (!cartData[itemId]) cartData[itemId] = {};
+
+        cartData[itemId][size] = (cartData[itemId][size] || 0) + 1;
+
+        userData.cartData = cartData;
+        await userData.save();
+
         res.json({ success: true, message: "Product added to cart successfully" });
     } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message });
+        console.log("Add to cart error:", error);
+        res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
-
-// update user cart
+// ================= UPDATE CART =================
 const updateCart = async(req, res) => {
     try {
-        const { userId, itemId, size, quantity } = req.body
-        const userData = await userModel.findById(userId);
-        let cartData = await userData.cartData;
+        const userId = req.user.id; // 🔥 FROM JWT
+        const { itemId, size, quantity } = req.body;
 
-        cartData[itemId][size] = quantity
-        await userModel.findByIdAndUpdate(userId, { cartData })
+        const userData = await userModel.findById(userId);
+
+        if (!userData) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found. Please login again.",
+            });
+        }
+
+        let cartData = userData.cartData || {};
+
+        if (!cartData[itemId]) cartData[itemId] = {};
+
+        cartData[itemId][size] = quantity;
+
+        userData.cartData = cartData;
+        await userData.save();
+
         res.json({ success: true, message: "Cart updated successfully" });
     } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message });
+        console.log("Update cart error:", error);
+        res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
-// get user cart
+// ================= GET USER CART =================
 const getUserCart = async(req, res) => {
     try {
-        const { userId } = req.body;
-        const userData = await userModel.findById(userId);
-        let cartData = await userData.cartData;
-        res.json({ success: true, message: cartData });
-    } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
-    }
-}
+        const userId = req.user.id; // 🔥 FROM JWT
 
-export { addToCart, updateCart, getUserCart }
+        const userData = await userModel.findById(userId);
+
+        if (!userData) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found. Please login again.",
+            });
+        }
+
+        res.json({
+            success: true,
+            cartData: userData.cartData || {},
+        });
+    } catch (error) {
+        console.log("Get cart error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export { addToCart, updateCart, getUserCart };
