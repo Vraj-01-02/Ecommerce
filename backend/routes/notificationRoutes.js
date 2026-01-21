@@ -4,19 +4,22 @@ import {
     markAllRead,
     markSingleRead,
 } from "../controllers/notificationController.js";
-import adminAuth from "../middleware/adminAuth.js";
+import adminAuth from "../middleware/authAdmin.js";
 
 const router = express.Router();
 
 /* ================= ADMIN NOTIFICATIONS ================= */
 
-// Get all admin notifications
-router.get("/admin", adminAuth, getAdminNotifications);
+// Get logged-in admin notifications
+// GET /api/notifications
+router.get("/", adminAuth, getAdminNotifications);
 
-// Mark all as read
-router.put("/read", adminAuth, markAllRead);
+// Mark all notifications as read
+// PUT /api/notifications/read-all
+router.put("/read-all", adminAuth, markAllRead);
 
-// Mark single as read (used when clicking notification)
-router.put("/read-single", adminAuth, markSingleRead);
+// Mark single notification as read (on click)
+// PUT /api/notifications/:id/read
+router.put("/:id/read", adminAuth, markSingleRead);
 
 export default router;

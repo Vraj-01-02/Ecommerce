@@ -1,35 +1,60 @@
 import express from "express";
 import {
+    adminLogin,
     getAdminProfile,
     updateAdminProfile,
     changeAdminPassword,
-    adminLogin,
-    getDashboardStats
+    getDashboardStats,
+    createAdmin,
+    listAdmins,
+    deleteAdmin,
+    getAdminActivity,
 } from "../controllers/adminController.js";
-import adminAuth from "../middleware/adminAuth.js";
+
+import authAdmin from "../middleware/authAdmin.js";
 import upload from "../middleware/multer.js";
 
 const router = express.Router();
 
-/* ========== PUBLIC ========== */
+/* ================= PUBLIC ROUTE ================= */
+
+// Admin Login
 router.post("/login", adminLogin);
 
-/* ========== PROFILE ========== */
-router.get("/profile", adminAuth, getAdminProfile);
-router.put("/profile", adminAuth, updateAdminProfile);
+/* ================= PROTECTED ROUTES ================= */
 
-/* ========== AVATAR UPLOAD ========== */
+// Get admin profile
+router.get("/profile", authAdmin, getAdminProfile);
+
+// Update admin profile
+router.put("/profile", authAdmin, updateAdminProfile);
+
+// Upload admin avatar
 router.put(
     "/upload-avatar",
-    adminAuth,
+    authAdmin,
     upload.single("avatar"),
     updateAdminProfile
 );
 
-/* ========== PASSWORD ========== */
-router.put("/change-password", adminAuth, changeAdminPassword);
+// Change admin password
+router.put("/change-password", authAdmin, changeAdminPassword);
 
-/* ========== DASHBOARD STATS ========== */
-router.get("/dashboard-stats", adminAuth, getDashboardStats);
+// Dashboard stats
+router.get("/dashboard-stats", authAdmin, getDashboardStats);
+
+/* ================= SUPER ADMIN ONLY ================= */
+
+// Create new admin
+router.post("/create", authAdmin, createAdmin);
+
+// List all admins
+router.get("/list", authAdmin, listAdmins);
+
+// Delete admin
+router.delete("/:id", authAdmin, deleteAdmin);
+
+// 🔥 Admin activity logs
+router.get("/activity", authAdmin, getAdminActivity);
 
 export default router;
