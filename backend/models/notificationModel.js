@@ -1,9 +1,15 @@
 import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema({
-    message: {
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+
+    // 🔥 ROLE BASED TARGETING
+    forRole: {
         type: String,
+        enum: ["admin"],
         required: true,
+        index: true,
     },
 
     type: {
@@ -12,11 +18,7 @@ const notificationSchema = new mongoose.Schema({
         default: "system",
     },
 
-    link: {
-        type: String,
-        required: true,
-        // e.g. "/order", "/users"
-    },
+    link: { type: String, required: true },
 
     referenceId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -26,11 +28,10 @@ const notificationSchema = new mongoose.Schema({
     isRead: {
         type: Boolean,
         default: false,
+        index: true,
     },
 }, { timestamps: true });
 
-const notificationModel =
-    mongoose.models.notification ||
-    mongoose.model("notification", notificationSchema);
+notificationSchema.index({ forRole: 1, isRead: 1, createdAt: -1 });
 
-export default notificationModel;
+export default mongoose.model("Notification", notificationSchema);
