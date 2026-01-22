@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../utils/api";
 import { currency } from "../App";
+import { jwtDecode } from "jwt-decode";
 import {
   ShoppingBag,
   CheckCircle,
@@ -9,6 +10,8 @@ import {
 } from "lucide-react";
 
 const Dashboard = () => {
+  const [role, setRole] = useState(null);
+
   const [data, setData] = useState({
     totalOrders: 0,
     delivered: 0,
@@ -17,6 +20,20 @@ const Dashboard = () => {
     recentOrders: [],
   });
 
+  /* ================= GET ROLE FROM TOKEN ================= */
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setRole(decoded.role);
+      } catch (err) {
+        console.error("Invalid token");
+      }
+    }
+  }, []);
+
+  /* ================= FETCH DASHBOARD DATA ================= */
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -63,7 +80,6 @@ const Dashboard = () => {
           Dashboard Overview
         </h2>
 
-        {/* SIGNATURE GLOW LINE (MATCHES TITLE WIDTH) */}
         <div className="relative mt-3">
           <div className="h-1.5 w-full bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full" />
           <div className="absolute top-0 h-1.5 w-full bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full blur-md opacity-60" />
@@ -78,25 +94,30 @@ const Dashboard = () => {
           icon={ShoppingBag}
           gradient="from-indigo-500 to-purple-600"
         />
+
         <StatCard
           title="Delivered Orders"
           value={data.delivered}
           icon={CheckCircle}
           gradient="from-emerald-500 to-green-600"
         />
+
         <StatCard
           title="Pending Orders"
           value={data.pending}
           icon={Clock}
           gradient="from-amber-500 to-orange-600"
         />
-        {/* MONEY CARD — FINTECH GRADE COLOR */}
-        <StatCard
-          title="Total Revenue"
-          value={`${currency}${data.revenue}`}
-          icon={IndianRupee}
-          gradient="from-emerald-500 to-cyan-600"
-        />
+
+        {/* 🔐 REVENUE — SUPER ADMIN ONLY */}
+        {role === "SuperAdmin" && (
+          <StatCard
+            title="Total Revenue"
+            value={`${currency}${data.revenue}`}
+            icon={IndianRupee}
+            gradient="from-emerald-500 to-cyan-600"
+          />
+        )}
       </div>
 
       {/* RECENT ORDERS */}
@@ -157,6 +178,8 @@ const Dashboard = () => {
   );
 };
 
+/* ================= STAT CARD ================= */
+
 const StatCard = ({ title, value, icon: Icon, gradient }) => {
   return (
     <div
@@ -179,7 +202,6 @@ const StatCard = ({ title, value, icon: Icon, gradient }) => {
         <div
           className={`w-12 h-12 flex items-center justify-center rounded-xl text-white shadow-lg bg-linear-to-tr ${gradient}`}
         >
-          {/* Bigger, bolder icon for premium feel */}
           <Icon size={24} strokeWidth={2.2} />
         </div>
       </div>
