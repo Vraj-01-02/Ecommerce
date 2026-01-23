@@ -151,6 +151,7 @@ const allOrders = async(req, res) => {
 };
 
 // ================= 🔥 ADMIN UPDATE ORDER STATUS =================
+// ================= 🔥 ADMIN UPDATE ORDER STATUS =================
 const updateStatus = async(req, res) => {
     try {
         const { orderId, status } = req.body;
@@ -165,13 +166,17 @@ const updateStatus = async(req, res) => {
         order.status = status;
         await order.save();
 
-        // 🔥 ACTIVITY LOG (THIS WAS MISSING)
+        // 🔥 ACTIVITY LOG (UPGRADED)
         await logAdminActivity({
             admin: req.admin,
             action: "UPDATE_ORDER_STATUS",
             description: `Updated order #${order._id
         .toString()
         .slice(-6)} from "${oldStatus}" to "${status}"`,
+
+            // 👇 YE DO LINE MOST IMPORTANT HAI
+            entityType: "order",
+            entityId: order._id,
         });
 
         res.json({ success: true, message: "Order Status Updated" });

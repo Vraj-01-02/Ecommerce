@@ -13,7 +13,8 @@ export const adminLogin = async(req, res) => {
     try {
         const { email, password } = req.body;
 
-        const admin = await Admin.findOne({ email });
+        const admin = await Admin.findOne({ email }).select("+password");
+
         if (!admin) {
             return res.status(401).json({
                 success: false,
@@ -35,7 +36,7 @@ export const adminLogin = async(req, res) => {
                 role: admin.role,
                 permissions: admin.permissions,
             },
-            process.env.JWT_SECRET, { expiresIn: "1d" }
+            process.env.JWT_SECRET, { expiresIn: "30d" }
         );
 
         // 🔥 ACTIVITY LOG
