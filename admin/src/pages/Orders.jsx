@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom"; // ✅ STEP 2 FIX
 import api from "../utils/api";
 import { currency } from "../App";
 import { toast } from "react-toastify";
@@ -25,6 +26,8 @@ const statusSteps = [
 /* ================== COMPONENT ================== */
 
 const Orders = () => {
+  const { id } = useParams(); // ✅ ORDER ID FROM NOTIFICATION
+
   const [orders, setOrders] = useState([]);
   const [loadingId, setLoadingId] = useState(null);
 
@@ -67,6 +70,24 @@ const Orders = () => {
     fetchAllOrders();
   }, []);
 
+  /* ================== 🔥 AUTO SCROLL FROM NOTIFICATION ================== */
+  useEffect(() => {
+    if (id && orders.length) {
+      const el = document.getElementById(id);
+
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        // highlight effect
+        el.classList.add("ring-2", "ring-indigo-500");
+
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-indigo-500");
+        }, 4000);
+      }
+    }
+  }, [id, orders]);
+
   return (
     <div className="flex w-full min-w-0">
       <div className="flex-1 min-w-0 sm:px-6 pb-10">
@@ -83,6 +104,7 @@ const Orders = () => {
 
         {orders.map((order) => (
           <div
+            id={order._id} // ✅ REQUIRED FOR SCROLL
             key={order._id}
             className="bg-white border rounded-xl p-4 sm:p-6 mb-6 shadow-sm hover:shadow-md transition"
           >
