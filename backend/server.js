@@ -3,6 +3,8 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
+import path from "path";
+
 import connectDB from "./config/mongodb.js";
 import connectCloudinary from "./config/cloudinary.js";
 
@@ -13,57 +15,20 @@ import orderRouter from "./routes/orderRoute.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import adminRoute from "./routes/adminRoute.js";
 
-import path from "path";
-
 const app = express();
 const __dirname = path.resolve();
 const port = process.env.PORT || 4000;
 
-/* ================= BODY PARSER ================= */
+/* ================= MIDDLEWARE ================= */
 
 app.use(express.json());
 
-/* ================= CORS (EXPRESS 5 SAFE) ================= */
-
-const allowedOrigins = [
-    "http://localhost:5173", // frontend
-    "http://localhost:5174", // admin
-];
-
 app.use(
     cors({
-        origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) {
-                callback(null, true);
-            } else {
-                callback(new Error("Not allowed by CORS"));
-            }
-        },
+        origin: ["http://localhost:5173", "http://localhost:5174"],
         credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE"],
-        allowedHeaders: ["Content-Type", "Authorization", "token"],
     })
 );
-
-/* ⚠️ IMPORTANT FIX FOR PREFLIGHT (NO app.options BUG) */
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-    res.header(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS"
-    );
-    res.header(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, token"
-    );
-    res.header("Access-Control-Allow-Credentials", "true");
-
-    if (req.method === "OPTIONS") {
-        return res.sendStatus(200);
-    }
-
-    next();
-});
 
 /* ================= STATIC FILES ================= */
 
@@ -75,7 +40,7 @@ app.use("/api/user", userRouter);
 app.use("/api/product", productRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/order", orderRouter);
-app.use("/api/notification", notificationRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoute);
 
 app.get("/", (req, res) => {
@@ -87,15 +52,15 @@ app.get("/", (req, res) => {
 const startServer = async() => {
     try {
         await connectDB();
-        console.log("✅ Database Connected");
+        console.log("DB Connected");
 
         connectCloudinary();
 
         app.listen(port, () => {
-            console.log(`✅ Server started on port: ${port}`);
+            console.log(`Server started on port ${port}`);
         });
     } catch (error) {
-        console.error("❌ Server startup error:", error.message);
+        console.error("Server startup error:", error.message);
         process.exit(1);
     }
 };
