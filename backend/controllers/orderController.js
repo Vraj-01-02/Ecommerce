@@ -2,6 +2,7 @@ import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import Notification from "../models/notificationModel.js";
 import logAdminActivity from "../utils/logAdminActivity.js";
+import { emitToAdmins, emitToUser } from "../utils/socketEvents.js";
 
 import Stripe from "stripe";
 import dotenv from "dotenv";
@@ -42,6 +43,23 @@ const placeOrder = async(req, res) => {
             referenceId: newOrder._id,
         });
 
+        // 🔥 EMIT SOCKET EVENT TO ADMINS
+        emitToAdmins("newOrder", {
+            orderId: newOrder._id,
+            orderNumber: newOrder._id.toString().slice(-6),
+            amount,
+            customer: `${address.firstName} ${address.lastName}`,
+            paymentMethod: "COD",
+            timestamp: new Date(),
+        });
+
+        // 🔥 EMIT CONFIRMATION TO USER
+        emitToUser(userId, "orderConfirmed", {
+            orderId: newOrder._id,
+            orderNumber: newOrder._id.toString().slice(-6),
+            status: "Order Placed",
+        });
+
         res.json({ success: true, message: "Order Placed" });
     } catch (error) {
         console.error("COD Order Error:", error);
@@ -77,6 +95,16 @@ const placeOrderStripe = async(req, res) => {
             type: "order",
             link: `/orders/${newOrder._id}`,
             referenceId: newOrder._id,
+        });
+
+        // 🔥 EMIT SOCKET EVENT TO ADMINS
+        emitToAdmins("newOrder", {
+            orderId: newOrder._id,
+            orderNumber: newOrder._id.toString().slice(-6),
+            amount,
+            customer: `${address.firstName} ${address.lastName}`,
+            paymentMethod: "Stripe",
+            timestamp: new Date(),
         });
 
         const line_items = items.map((item) => ({
@@ -143,7 +171,7 @@ const userOrders = async(req, res) => {
 // ================= ADMIN =================
 const allOrders = async(req, res) => {
     try {
-        const orders = await orderModel.find({});
+        const orders = await orderModel.find({}).sort({ date: -1 });
         res.json({ success: true, orders });
     } catch (error) {
         res.json({ success: false, message: error.message });
@@ -177,6 +205,15 @@ const updateStatus = async(req, res) => {
             // 👇 YE DO LINE MOST IMPORTANT HAI
             entityType: "order",
             entityId: order._id,
+        });
+
+        // 🔥 EMIT SOCKET EVENT TO USER
+        emitToUser(order.userId.toString(), "orderStatusUpdate", {
+            orderId: order._id,
+            orderNumber: order._id.toString().slice(-6),
+            oldStatus,
+            newStatus: status,
+            timestamp: new Date(),
         });
 
         res.json({ success: true, message: "Order Status Updated" });

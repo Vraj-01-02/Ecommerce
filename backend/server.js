@@ -4,9 +4,11 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import path from "path";
+import http from "http";
 
 import connectDB from "./config/mongodb.js";
 import connectCloudinary from "./config/cloudinary.js";
+import { initSocket } from "./config/socket.js";
 
 import userRouter from "./routes/userRoute.js";
 import productRouter from "./routes/productRoute.js";
@@ -14,8 +16,10 @@ import cartRouter from "./routes/cartRoute.js";
 import orderRouter from "./routes/orderRoute.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import adminRoute from "./routes/adminRoute.js";
+import addressRouter from "./routes/addressRoute.js";
 
 const app = express();
+const server = http.createServer(app);
 const __dirname = path.resolve();
 const port = process.env.PORT || 4000;
 
@@ -42,6 +46,7 @@ app.use("/api/cart", cartRouter);
 app.use("/api/order", orderRouter);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoute);
+app.use("/api/address", addressRouter);
 
 app.get("/", (req, res) => {
     res.send("API working");
@@ -56,7 +61,11 @@ const startServer = async() => {
 
         connectCloudinary();
 
-        app.listen(port, () => {
+        // Initialize Socket.IO
+        initSocket(server);
+        console.log("✅ Socket.IO initialized");
+
+        server.listen(port, () => {
             console.log(`Server started on port ${port}`);
         });
     } catch (error) {
