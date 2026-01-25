@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import Title from "../components/Title";
 import CartTotal from "../components/CartTotal";
 import { assets } from "../assets/assets";
@@ -11,6 +11,10 @@ const PlaceOrder = () => {
   const navigate = useNavigate();
   const [method, setMethod] = useState("cod");
   const [loading, setLoading] = useState(false);
+  const [saveAddress, setSaveAddress] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [showAddressForm, setShowAddressForm] = useState(true);
 
   const {
     backendUrl,
@@ -38,6 +42,72 @@ const PlaceOrder = () => {
     setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
   };
 
+  // ================= FETCH SAVED ADDRESSES =================
+  // ================= FETCH SAVED ADDRESSES =================
+  const fetchSavedAddresses = async () => {
+    try {
+      if (!token) return;
+      
+      const res = await userApi.get("/api/address");
+      // Safety check for response structure
+      if (res && res.data && res.data.success) {
+        // Ensure addresses is an array
+        const ads = Array.isArray(res.data.addresses) ? res.data.addresses : [];
+        setSavedAddresses(ads);
+        
+        // Auto-select default address
+        const defaultAddr = ads.find(addr => addr.isDefault);
+        if (defaultAddr) {
+          selectAddress(defaultAddr);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch addresses:", error);
+      // Do not crash UI on API error
+    }
+  };
+
+  //================= SELECT SAVED ADDRESS =================
+  const selectAddress = (address) => {
+    setFormData({
+      firstName: address.firstName,
+      lastName: address.lastName,
+      email: address.email,
+      street: address.street,
+      city: address.city,
+      state: address.state,
+      zipcode: address.zipcode,
+      country: address.country,
+      phone: address.phone,
+    });
+    setSelectedAddressId(address._id);
+    setShowAddressForm(false);
+  };
+
+  // ================= DELETE ADDRESS =================
+  const deleteAddress = async (addressId) => {
+    try {
+      const res = await userApi.delete(`/api/address/${addressId}`);
+      if (res.data.success) {
+        setSavedAddresses(res.data.addresses);
+        toast.success("Address deleted");
+        if (selectedAddressId === addressId) {
+          setSelectedAddressId(null);
+          setShowAddressForm(true);
+        }
+      }
+    } catch (error) {
+      toast.error("Failed to delete address");
+    }
+  };
+
+  // ================= LOAD ADDRESSES ON MOUNT =================
+  useEffect(() => {
+    if (token) {
+      fetchSavedAddresses();
+    }
+  }, [token]);
+
   const onSubmitHandler = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -51,6 +121,15 @@ const PlaceOrder = () => {
     setLoading(true);
 
     try {
+      // ================= SAVE ADDRESS IF CHECKED =================
+      if (saveAddress) {
+        await userApi.post("/api/address", {
+          ...formData,
+          label: "Home",
+          isDefault: savedAddresses.length === 0 // First address is default
+        });
+      }
+
       let orderItems = [];
 
       Object.keys(cartItems).forEach((productId) => {
@@ -135,35 +214,111 @@ const PlaceOrder = () => {
           <Title text1={"DELIVERY"} text2={"INFORMATION"} />
         </div>
 
-        <div className="flex gap-3">
-          <input required name="firstName" value={formData.firstName} onChange={onChangeHandler}
-            className="border rounded py-1.5 px-3.5 w-full" placeholder="First name" />
-          <input required name="lastName" value={formData.lastName} onChange={onChangeHandler}
-            className="border rounded py-1.5 px-3.5 w-full" placeholder="Last name" />
-        </div>
+        {/* SAVED ADDRESSES */}
+        {Array.isArray(savedAddresses) && savedAddresses.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-medium mb-3">Saved Addresses</h3>
+            <div className="flex flex-col gap-3">
+              {savedAddresses.map((addr) => (
+                <div
+                  key={addr._id}
+                  onClick={() => selectAddress(addr)}
+                  className={`border p-3 rounded cursor-pointer relative ${
+                    selectedAddressId === addr._id
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <p className="font-medium">
+                    {addr.firstName} {addr.lastName}
+                    {addr.isDefault && (
+                        <span className="ml-2 bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded">Default</span>
+                    )}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {addr.street}, {addr.city}, {addr.state} - {addr.zipcode}
+                  </p>
+                  <p className="text-sm text-gray-600"> Phone: {addr.phone}</p>
+                  
+                  <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        deleteAddress(addr._id);
+                    }}
+                    className="absolute top-3 right-3 text-red-500 hover:text-red-700 text-xs uppercase font-medium"
+                    type="button"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedAddressId(null);
+                  setShowAddressForm(true);
+                  setFormData({
+                    firstName: "", lastName: "", email: "", street: "",
+                    city: "", state: "", zipcode: "", country: "", phone: ""
+                  });
+                }}
+                className={`p-3 border rounded text-center font-medium ${
+                    showAddressForm ? "bg-black text-white" : "bg-gray-50 text-gray-700"
+                }`}
+              >
+                + Add New Address
+              </button>
+            </div>
+          </div>
+        )}
 
-        <input required name="email" value={formData.email} onChange={onChangeHandler}
-          className="border rounded py-1.5 px-3.5 w-full" placeholder="Email address" />
+        {/* NEW ADDRESS FORM */}
+        {showAddressForm && (
+            <>
+                <div className="flex gap-3">
+                <input required name="firstName" value={formData.firstName} onChange={onChangeHandler}
+                    className="border rounded py-1.5 px-3.5 w-full" placeholder="First name" />
+                <input required name="lastName" value={formData.lastName} onChange={onChangeHandler}
+                    className="border rounded py-1.5 px-3.5 w-full" placeholder="Last name" />
+                </div>
 
-        <input required name="street" value={formData.street} onChange={onChangeHandler}
-          className="border rounded py-1.5 px-3.5 w-full" placeholder="Street" />
+                <input required name="email" value={formData.email} onChange={onChangeHandler}
+                className="border rounded py-1.5 px-3.5 w-full" placeholder="Email address" />
 
-        <div className="flex gap-3">
-          <input required name="city" value={formData.city} onChange={onChangeHandler}
-            className="border rounded py-1.5 px-3.5 w-full" placeholder="City" />
-          <input required name="state" value={formData.state} onChange={onChangeHandler}
-            className="border rounded py-1.5 px-3.5 w-full" placeholder="State" />
-        </div>
+                <input required name="street" value={formData.street} onChange={onChangeHandler}
+                className="border rounded py-1.5 px-3.5 w-full" placeholder="Street" />
 
-        <div className="flex gap-3">
-          <input required name="zipcode" value={formData.zipcode} onChange={onChangeHandler}
-            className="border rounded py-1.5 px-3.5 w-full" placeholder="Zip code" />
-          <input required name="country" value={formData.country} onChange={onChangeHandler}
-            className="border rounded py-1.5 px-3.5 w-full" placeholder="Country" />
-        </div>
+                <div className="flex gap-3">
+                <input required name="city" value={formData.city} onChange={onChangeHandler}
+                    className="border rounded py-1.5 px-3.5 w-full" placeholder="City" />
+                <input required name="state" value={formData.state} onChange={onChangeHandler}
+                    className="border rounded py-1.5 px-3.5 w-full" placeholder="State" />
+                </div>
 
-        <input required name="phone" value={formData.phone} onChange={onChangeHandler}
-          className="border rounded py-1.5 px-3.5 w-full" placeholder="Phone" />
+                <div className="flex gap-3">
+                <input required name="zipcode" value={formData.zipcode} onChange={onChangeHandler}
+                    className="border rounded py-1.5 px-3.5 w-full" placeholder="Zip code" />
+                <input required name="country" value={formData.country} onChange={onChangeHandler}
+                    className="border rounded py-1.5 px-3.5 w-full" placeholder="Country" />
+                </div>
+
+                <input required name="phone" value={formData.phone} onChange={onChangeHandler}
+                className="border rounded py-1.5 px-3.5 w-full" placeholder="Phone" />
+
+                {/* SAVE ADDRESS CHECKBOX */}
+                <div className="flex items-center gap-2 mt-2">
+                    <input 
+                        type="checkbox" 
+                        id="saveAddress" 
+                        checked={saveAddress} 
+                        onChange={(e) => setSaveAddress(e.target.checked)}
+                        className="w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="saveAddress" className="cursor-pointer text-gray-700">Save this address for detailed checkout</label>
+                </div>
+            </>
+        )}
       </div>
 
       {/* RIGHT */}
