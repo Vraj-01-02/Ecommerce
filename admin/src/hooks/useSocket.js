@@ -6,10 +6,24 @@ const SOCKET_URL = "http://localhost:4000";
 
 const useSocket = (onNewOrder, onOrderUpdate) => {
     const socketRef = useRef(null);
+    const onNewOrderRef = useRef(onNewOrder);
+    const onOrderUpdateRef = useRef(onOrderUpdate);
+
+    // Keep refs in sync with latest callbacks
+    useEffect(() => {
+        onNewOrderRef.current = onNewOrder;
+        onOrderUpdateRef.current = onOrderUpdate;
+    }, [onNewOrder, onOrderUpdate]);
 
     useEffect(() => {
         const token = localStorage.getItem("adminToken");
         if (!token) return;
+
+        // Prevent multiple socket connections
+        if (socketRef.current?.connected) {
+            console.log("⚠️ Socket already connected, skipping...");
+            return;
+        }
 
         try {
             const decoded = jwtDecode(token);
@@ -32,26 +46,28 @@ const useSocket = (onNewOrder, onOrderUpdate) => {
                 console.log("❌ Socket disconnected");
             });
 
-            // Listen for new orders
+            // Listen for new orders - use ref to get latest callback
             socket.on("newOrder", (data) => {
                 console.log("🔔 New order received:", data);
-                if (onNewOrder) onNewOrder(data);
+                if (onNewOrderRef.current) onNewOrderRef.current(data);
             });
 
-            // Listen for order updates (optional)
+            // Listen for order updates - use ref to get latest callback
             socket.on("orderStatusUpdate", (data) => {
                 console.log("📦 Order status updated:", data);
-                if (onOrderUpdate) onOrderUpdate(data);
+                if (onOrderUpdateRef.current) onOrderUpdateRef.current(data);
             });
 
             // Cleanup on unmount
             return () => {
+                console.log("🧹 Cleaning up socket connection");
                 socket.disconnect();
+                socketRef.current = null;
             };
         } catch (error) {
             console.error("Socket connection error:", error);
         }
-    }, [onNewOrder, onOrderUpdate]);
+    }, []); // Empty deps - socket created only once!
 
     return socketRef.current;
 };

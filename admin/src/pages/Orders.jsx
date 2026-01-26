@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom"; // ✅ STEP 2 FIX
+import React, { useEffect, useState, useContext } from "react";
+import { useParams } from "react-router-dom"; 
 import api from "../utils/api";
 import { currency } from "../App";
 import { toast } from "react-toastify";
 import { assets } from "../assets/assets";
+import { AdminContext } from "../context/AdminContext";
 
 /* ================== STATUS HELPERS ================== */
 
@@ -26,7 +27,8 @@ const statusSteps = [
 /* ================== COMPONENT ================== */
 
 const Orders = () => {
-  const { id } = useParams(); // ✅ ORDER ID FROM NOTIFICATION
+  const { id } = useParams(); 
+  const { socket } = useContext(AdminContext); // ✅ CONSUME SOCKET
 
   const [orders, setOrders] = useState([]);
   const [loadingId, setLoadingId] = useState(null);
@@ -36,7 +38,7 @@ const Orders = () => {
       const res = await api.post("/api/order/list");
 
       if (res.data.success) {
-        setOrders([...res.data.orders].reverse());
+        setOrders(res.data.orders); 
       }
     } catch {
       toast.error("Failed to load orders");
@@ -69,6 +71,27 @@ const Orders = () => {
   useEffect(() => {
     fetchAllOrders();
   }, []);
+
+  /* ================== REAL-TIME UPDATES ================== */
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = (data) => {
+      // Optional: Show toast if new order
+      if (data && data.orderId) {
+          // toast.info("New order received!");
+      }
+      fetchAllOrders();
+    };
+
+    socket.on("newOrder", handleUpdate);
+    socket.on("orderStatusUpdate", handleUpdate);
+
+    return () => {
+      socket.off("newOrder", handleUpdate);
+      socket.off("orderStatusUpdate", handleUpdate);
+    };
+  }, [socket]);
 
   /* ================== 🔥 AUTO SCROLL FROM NOTIFICATION ================== */
   useEffect(() => {
