@@ -5,9 +5,13 @@ import App from './App.jsx'
 import {BrowserRouter} from 'react-router-dom'
 import "react-toastify/dist/ReactToastify.css";
 
+import AdminContextProvider from './context/AdminContext.jsx'
+
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
-    <App />
+    <AdminContextProvider>
+      <App />
+    </AdminContextProvider>
   </BrowserRouter>
  
 )

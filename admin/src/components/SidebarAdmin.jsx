@@ -49,7 +49,7 @@ const Sidebar = () => {
           {({ isActive }) => (
             <>
               {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
               )}
               <LayoutDashboard size={20} className={isActive ? "text-indigo-600" : ""} />
               <span className="hidden md:inline">Dashboard</span>
@@ -68,7 +68,7 @@ const Sidebar = () => {
           {({ isActive }) => (
             <>
               {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
               )}
               <PlusSquare size={20} className={isActive ? "text-indigo-600" : ""} />
               <span className="hidden md:inline">Add Products</span>
@@ -87,7 +87,7 @@ const Sidebar = () => {
           {({ isActive }) => (
             <>
               {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
               )}
               <List size={20} className={isActive ? "text-indigo-600" : ""} />
               <span className="hidden md:inline">Products</span>
@@ -106,7 +106,7 @@ const Sidebar = () => {
           {({ isActive }) => (
             <>
               {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
               )}
               <ShoppingBag size={20} className={isActive ? "text-indigo-600" : ""} />
               <span className="hidden md:inline">Orders</span>
@@ -130,7 +130,7 @@ const Sidebar = () => {
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
                   )}
                   <UserPlus size={20} className={isActive ? "text-indigo-600" : ""} />
                   <span className="hidden md:inline">Create Admin</span>
@@ -149,7 +149,7 @@ const Sidebar = () => {
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
                   )}
                   <Users size={20} className={isActive ? "text-indigo-600" : ""} />
                   <span className="hidden md:inline">Admins</span>
@@ -168,7 +168,7 @@ const Sidebar = () => {
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-indigo-600 to-purple-600 rounded-r-full"></div>
                   )}
                   <ShieldCheck size={20} className={isActive ? "text-indigo-600" : ""} />
                   <span className="hidden md:inline">Admin Activity</span>
