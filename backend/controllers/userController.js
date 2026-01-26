@@ -4,7 +4,9 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 const createToken = (id) => {
-        return jwt.sign({ id }, process.env.JWT_SECRET)
+        // Token expires in 30 days (30d = 30 days)
+        // You can change to: '7d' = 7 days, '1h' = 1 hour, '90d' = 90 days
+        return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' })
     }
     // Route for user login
 const loginUser = async(req, res) => {
@@ -68,7 +70,7 @@ const adminLogin = async(req, res) => {
     try {
         const { email, password } = req.body;
         if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign(email + password, process.env.JWT_SECRET);
+            const token = jwt.sign(email + password, process.env.JWT_SECRET, { expiresIn: '30d' });
             res.json({ success: true, token });
         } else {
             res.json({ success: false, message: "Invalid credentials  " });
@@ -79,4 +81,51 @@ const adminLogin = async(req, res) => {
     }
 }
 
-export { loginUser, registerUser, adminLogin };
+// Get user profile
+const getUserProfile = async(req, res) => {
+    try {
+        // Use req.user.id (from middleware) if available, otherwise check body
+        const userId = req.user ? req.user._id : req.body.userId;
+        
+        const user = await userModel.findById(userId).select('-password');
+        
+        if (!user) {
+            return res.json({ success: false, message: "User not found" });
+        }
+        
+        res.json({ success: true, user });
+    } catch (error) {
+        console.log(error);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+// Update user profile
+const updateUserProfile = async(req, res) => {
+    try {
+        // Use req.user.id (from middleware) if available
+        const userId = req.user ? req.user._id : req.body.userId;
+        const { name, phone } = req.body;
+        
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (phone) updateData.phone = phone;
+        
+        const user = await userModel.findByIdAndUpdate(
+            userId,
+            updateData,
+            { new: true }
+        ).select('-password');
+        
+        if (!user) {
+            return res.json({ success: false, message: "User not found" });
+        }
+        
+        res.json({ success: true, message: "Profile updated successfully", user });
+    } catch (error) {
+        console.log(error);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+export { loginUser, registerUser, adminLogin, getUserProfile, updateUserProfile };

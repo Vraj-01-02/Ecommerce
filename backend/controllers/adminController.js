@@ -121,7 +121,7 @@ export const changeAdminPassword = async(req, res) => {
     try {
         const { current, new: newPassword } = req.body;
 
-        const admin = await Admin.findById(req.admin._id);
+        const admin = await Admin.findById(req.admin._id).select('+password');
 
         const isMatch = await bcrypt.compare(current, admin.password);
         if (!isMatch) {
@@ -196,6 +196,8 @@ export const createAdmin = async(req, res) => {
             message: "Admin created successfully",
         });
     } catch (error) {
+        console.error("❌ CREATE ADMIN ERROR:", error.message);
+        console.error("Full error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -271,11 +273,14 @@ export const deleteAdmin = async(req, res) => {
 
 export const getDashboardStats = async(req, res) => {
     try {
-        const totalProducts = await Product.countDocuments();
-        const totalOrders = await Order.countDocuments();
-        const totalUsers = await User.countDocuments();
+        const { role, permissions } = req.admin;
 
-        if (req.admin.role === "SuperAdmin") {
+        // 🔥 SUPER ADMIN – FULL ACCESS
+        if (role === "SuperAdmin") {
+            const totalProducts = await Product.countDocuments();
+            const totalOrders = await Order.countDocuments();
+            const totalUsers = await User.countDocuments();
+
             const orders = await Order.find();
             const totalRevenue = orders.reduce(
                 (sum, order) => sum + (order.amount || 0),
@@ -291,12 +296,30 @@ export const getDashboardStats = async(req, res) => {
             });
         }
 
-        return res.json({
-            success: true,
-            totalProducts,
-            totalOrders,
-            totalUsers,
-        });
+        // 🔹 ORDER ADMIN – ONLY ORDERS
+        if (permissions.includes("orders") && !permissions.includes("products")) {
+            const totalOrders = await Order.countDocuments();
+
+            return res.json({
+                success: true,
+                totalOrders,
+            });
+        }
+
+        // 🔹 PRODUCT ADMIN – PRODUCTS + ORDERS
+        if (permissions.includes("products")) {
+            const totalProducts = await Product.countDocuments();
+            const totalOrders = await Order.countDocuments();
+
+            return res.json({
+                success: true,
+                totalProducts,
+                totalOrders,
+            });
+        }
+
+        // ❌ fallback (should not happen)
+        return res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

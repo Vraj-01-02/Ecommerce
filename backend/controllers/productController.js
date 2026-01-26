@@ -1,13 +1,14 @@
 import { v2 as cloudinary } from "cloudinary";
 import productModel from "../models/productModel.js";
 
+/* ================= CLOUDINARY CONFIG ================= */
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_SECRET_KEY,
 });
 
-// function for add product
+/* ================= ADD PRODUCT ================= */
 const addProduct = async(req, res) => {
     try {
         const {
@@ -20,81 +21,97 @@ const addProduct = async(req, res) => {
             bestseller,
         } = req.body;
 
-        const image1 = req.files.image1 && req.files.image1[0];
-        const image2 = req.files.image2 && req.files.image2[0];
-        const image3 = req.files.image3 && req.files.image3[0];
-        const image4 = req.files.image4 && req.files.image4[0];
+        const image1 = req.files && req.files.image1 ? req.files.image1[0] : null;
+        const image2 = req.files && req.files.image2 ? req.files.image2[0] : null;
+        const image3 = req.files && req.files.image3 ? req.files.image3[0] : null;
+        const image4 = req.files && req.files.image4 ? req.files.image4[0] : null;
 
-        const images = [image1, image2, image3, image4].filter(
-            (item) => item !== undefined
-        );
 
-        let imagesUrl = await Promise.all(
+        const images = [image1, image2, image3, image4].filter(Boolean);
+
+        const imagesUrl = await Promise.all(
             images.map(async(item) => {
-                let result = await cloudinary.uploader.upload(item.path, {
+                const result = await cloudinary.uploader.upload(item.path, {
                     resource_type: "image",
                 });
                 return result.secure_url;
             })
         );
 
-        // ✅ Create product data object
-        const productData = {
+        const product = await productModel.create({
             name,
             description,
             price: Number(price),
             category,
             subCategory,
             sizes: JSON.parse(sizes),
-            bestseller: bestseller === "true" ? true : false,
+            bestseller: bestseller === "true",
             images: imagesUrl,
+            isActive: true, // default active (soft delete system)
             date: Date.now(),
-        };
+        });
 
-        console.log(productData);
-
-        // ✅ Save product in DB
-        const product = new productModel(productData);
-        await product.save();
-        res.json({ success: true, message: "Product Added" });
+        res.json({ success: true, message: "Product added", product });
     } catch (error) {
-        console.log(error);
-        res.json({ success: false, message: error.message });
+        console.error("Add Product Error:", error.message);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
-// function for list product
 
+/* ================= LIST PRODUCTS (ADMIN) ================= */
 const listProducts = async(req, res) => {
     try {
-        const products = await productModel.find({});
+        const products = await productModel.find({}).sort({ createdAt: -1 });
         res.json({ success: true, products });
     } catch (error) {
-        console.log(error);
         res.json({ success: false, message: error.message });
     }
 };
 
-// function for remove product
-const removeProduct = async(req, res) => {
+/* ================= USER SIDE PRODUCTS ================= */
+const listActiveProducts = async(req, res) => {
     try {
-        await productModel.findByIdAndDelete(req.body.id);
-        res.json({ success: true, message: "Product removed" });
+        const products = await productModel.find({ isActive: true });
+        res.json({ success: true, products });
     } catch (error) {
-        console.log(error);
         res.json({ success: false, message: error.message });
     }
 };
+
+/* ================= TOGGLE ACTIVE / INACTIVE ================= */
+const toggleProductStatus = async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await productModel.findById(id);
+        if (!product) {
+            return res.json({ success: false, message: "Product not found" });
+        }
+
+        product.isActive = !product.isActive;
+        await product.save();
+
+        res.json({
+            success: true,
+            message: product.isActive ? "Product Activated" : "Product Deactivated",
+            isActive: product.isActive,
+        });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};
+
+/* ================= SINGLE PRODUCT ================= */
 const singleProduct = async(req, res) => {
     try {
-        const { productId } = req.body;
-        const product = await productModel.findById(productId);
+        const product = await productModel.findById(req.body.productId);
         res.json({ success: true, product });
     } catch (error) {
-        console.log(error);
         res.json({ success: false, message: error.message });
     }
 };
 
+/* ================= UPDATE PRODUCT ================= */
 const updateProduct = async(req, res) => {
     try {
         const { id } = req.params;
@@ -104,18 +121,9 @@ const updateProduct = async(req, res) => {
             return res.json({ success: false, message: "Product not found" });
         }
 
-        let images = product.images; // 👈 DEFAULT: OLD IMAGES
+        let images = product.images;
 
-        // 🔥 ONLY IF NEW IMAGES ARE UPLOADED
         if (req.files && req.files.length > 0) {
-
-            // 1️⃣ delete old images from Cloudinary
-            for (const img of product.images) {
-                const publicId = img.split("/").pop().split(".")[0];
-                await cloudinary.uploader.destroy(publicId);
-            }
-
-            // 2️⃣ upload new images
             images = [];
             for (const file of req.files) {
                 const upload = await cloudinary.uploader.upload(file.path, {
@@ -125,21 +133,47 @@ const updateProduct = async(req, res) => {
             }
         }
 
-        // 3️⃣ update product
         await productModel.findByIdAndUpdate(id, {
             name: req.body.name,
             price: Number(req.body.price),
             category: req.body.category,
-            images, // 👈 SAFE
+            images,
         });
 
-        res.json({ success: true, message: "Product updated successfully" });
+        res.json({ success: true, message: "Product updated" });
     } catch (error) {
-        console.error(error);
         res.json({ success: false, message: error.message });
     }
 };
 
+/* ================= HARD DELETE PRODUCT (HIDDEN / SUPER ADMIN) ================= */
+const deleteProduct = async(req, res) => {
+    try {
+        const { id } = req.params;
 
+        const product = await productModel.findById(id);
+        if (!product) {
+            return res.json({ success: false, message: "Product not found" });
+        }
 
-export { listProducts, addProduct, removeProduct, singleProduct, updateProduct };
+        await productModel.findByIdAndDelete(id);
+
+        res.json({
+            success: true,
+            message: "Product permanently deleted",
+        });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};
+
+/* ================= EXPORTS ================= */
+export {
+    addProduct,
+    listProducts,
+    listActiveProducts,
+    toggleProductStatus,
+    singleProduct,
+    updateProduct,
+    deleteProduct, // hidden hard delete
+};
