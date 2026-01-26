@@ -4,14 +4,16 @@ const api = axios.create({
     baseURL: import.meta.env.VITE_BACKEND_URL,
 });
 
-/* ================= ATTACH TOKEN ================= */
+let isLoggingOut = false;
 
+/* ================= REQUEST INTERCEPTOR ================= */
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem("adminToken");
+        const adminToken = localStorage.getItem("adminToken");
 
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        // ✅ ADMIN PANEL → ALWAYS attach adminToken
+        if (adminToken) {
+            config.headers.Authorization = `Bearer ${adminToken}`;
         }
 
         return config;
@@ -19,15 +21,25 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-/* ================= AUTO LOGOUT ON 401 ================= */
-
+/* ================= RESPONSE INTERCEPTOR ================= */
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
+        if (!error.response) return Promise.reject(error);
+
+        if (error.response.status === 401 && !isLoggingOut) {
+            isLoggingOut = true;
+
+            console.warn("Admin token expired or invalid");
+
             localStorage.removeItem("adminToken");
-            window.location.href = "/login";
+
+            // Route guard will redirect to login
+            setTimeout(() => {
+                isLoggingOut = false;
+            }, 1000);
         }
+
         return Promise.reject(error);
     }
 );
