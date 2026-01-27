@@ -1,21 +1,27 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+/* ================= ADMIN SCHEMA ================= */
 const adminSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
+        trim: true,
     },
 
     email: {
         type: String,
         required: true,
         unique: true,
+        lowercase: true,
+        trim: true,
     },
 
     password: {
         type: String,
         required: true,
+        minlength: 6,
+        select: false, // 🔥 password never returned by default
     },
 
     avatar: {
@@ -29,18 +35,19 @@ const adminSchema = new mongoose.Schema({
         default: "Admin",
     },
 
-    // 🔥 NEW: PERMISSIONS SYSTEM
-    // examples:
-    // ["products"]
-    // ["orders"]
-    // ["products", "orders"]
+    /* ================= PERMISSIONS =================
+       examples:
+       ["products"]
+       ["orders"]
+       ["products", "orders"]
+    */
     permissions: {
         type: [String],
         default: [],
     },
 }, { timestamps: true });
 
-// 🔐 PASSWORD HASH
+/* ================= PASSWORD HASH ================= */
 adminSchema.pre("save", async function() {
     if (!this.isModified("password")) return;
 
@@ -48,6 +55,13 @@ adminSchema.pre("save", async function() {
     this.password = await bcrypt.hash(this.password, salt);
 });
 
-const Admin = mongoose.model("Admin", adminSchema);
+/* ================= PASSWORD MATCH ================= */
+adminSchema.methods.comparePassword = async function(enteredPassword) {
+    return bcrypt.compare(enteredPassword, this.password);
+};
+
+/* ================= SAFE MODEL EXPORT ================= */
+const Admin =
+    mongoose.models.Admin || mongoose.model("Admin", adminSchema);
 
 export default Admin;
