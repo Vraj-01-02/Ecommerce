@@ -22,6 +22,9 @@ orderRouter.post("/place", authUser, placeOrder);
 // Place Stripe order
 orderRouter.post("/stripe", authUser, placeOrderStripe);
 
+orderRouter.get("/user", authUser, userOrders);
+
+
 // User order list
 orderRouter.post("/userorders", authUser, userOrders);
 

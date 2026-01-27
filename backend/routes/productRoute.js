@@ -1,17 +1,42 @@
 import express from "express";
-import { listProducts, addProduct, removeProduct, singleProduct } from '../controllers/productController.js';
-import upload from '../middleware/multer.js';
-import adminAuth from "../middleware/adminAuth.js";
-import { updateProduct } from "../controllers/productController.js";
+import {
+    listProducts,
+    listActiveProducts,
+    addProduct,
+    singleProduct,
+    updateProduct,
+    toggleProductStatus,
+    deleteProduct,
+} from "../controllers/productController.js";
 
-
+import upload from "../middleware/multer.js";
+import adminAuth from "../middleware/authAdmin.js";
 
 const productRouter = express.Router();
 
-productRouter.post('/add', adminAuth, upload.fields([{ name: 'image1', maxCount: 1 }, { name: 'image2', maxCount: 1 }, { name: 'image3', maxCount: 1 }, { name: 'image4', maxCount: 1 }]), addProduct);
-productRouter.post('/remove', adminAuth, removeProduct);
-productRouter.post('/single', singleProduct);
-productRouter.get('/list', listProducts);
+/* ================= ADD PRODUCT ================= */
+productRouter.post(
+    "/add",
+    adminAuth,
+    upload.fields([
+        { name: "image1", maxCount: 1 },
+        { name: "image2", maxCount: 1 },
+        { name: "image3", maxCount: 1 },
+        { name: "image4", maxCount: 1 },
+    ]),
+    addProduct
+);
+
+/* ================= LIST PRODUCTS (ADMIN) ================= */
+productRouter.get("/list", adminAuth, listProducts);
+
+/* ================= LIST ACTIVE PRODUCTS (USER) ================= */
+productRouter.get("/active", listActiveProducts);
+
+/* ================= SINGLE PRODUCT ================= */
+productRouter.post("/single", singleProduct);
+
+/* ================= UPDATE PRODUCT ================= */
 productRouter.put(
     "/update/:id",
     adminAuth,
@@ -19,5 +44,10 @@ productRouter.put(
     updateProduct
 );
 
+/* ================= TOGGLE ACTIVE / INACTIVE ================= */
+productRouter.patch("/toggle/:id", adminAuth, toggleProductStatus);
+
+/* ================= HARD DELETE PRODUCT (HIDDEN) ================= */
+productRouter.delete("/:id", adminAuth, deleteProduct);
 
 export default productRouter;
