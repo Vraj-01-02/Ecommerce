@@ -57,7 +57,6 @@ app.get("/", (req, res) => {
 const startServer = async() => {
     try {
         await connectDB();
-        console.log("DB Connected");
 
         connectCloudinary();
 
