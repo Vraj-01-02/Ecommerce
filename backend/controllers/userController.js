@@ -2,6 +2,8 @@ import userModel from "../models/userModel.js";
 import validator from 'validator';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 const createToken = (id) => {
         // Token expires in 30 days (30d = 30 days)
@@ -161,4 +163,115 @@ const changeUserPassword = async(req, res) => {
     }
 }
 
-export { loginUser, registerUser, adminLogin, getUserProfile, updateUserProfile, changeUserPassword };
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await userModel.findOne({ email });
+
+        if (!user) {
+            return res.json({ success: false, message: "User not found" });
+        }
+
+        // Get Reset Token
+        const resetToken = crypto.randomBytes(20).toString('hex');
+
+        // Hash token and set to resetPasswordToken field
+        user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+        // Set expire (e.g., 15 minutes)
+        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+
+        await user.save();
+
+        // Create Reset URL
+        // adjust localhost:5173 to your frontend URL
+        const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+        const emailTemplate = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="color: #333; margin: 0;">Password Reset</h2>
+                </div>
+                <div style="color: #555; font-size: 16px; line-height: 1.6;">
+                    <p>Hello,</p>
+                    <p>We received a request to reset your password. Please click the button below to create a new password:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${resetUrl}" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block;">Reset Password</a>
+                    </div>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #4f46e5; background-color: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 14px;">${resetUrl}</p>
+                    <p>If you didn't request a password reset, you can safely ignore this email.</p>
+                </div>
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #888; font-size: 12px;">
+                    <p>&copy; ${new Date().getFullYear()} Forever. All rights reserved.</p>
+                </div>
+            </div>
+        `;
+
+        // Send Email
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
+            auth: {
+                user: process.env.SMTP_MAIL,
+                pass: process.env.SMTP_PASSWORD,
+            },
+        });
+
+        const info = await transporter.sendMail({
+            from: process.env.SMTP_MAIL,
+            to: user.email,
+            subject: "Password Reset Request",
+            html: emailTemplate,
+        });
+
+        console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+
+        res.json({ success: true, message: `Email sent to ${user.email}` });
+
+    } catch (error) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+        await user.save();
+        console.log(error);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+// Reset Password Controller
+const resetPassword = async (req, res) => {
+    try {
+        // Hash the token from the URL to compare with DB
+        const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+        const user = await userModel.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.json({ success: false, message: "Invalid or expired token" });
+        }
+
+        if (req.body.password !== req.body.confirmPassword) {
+             return res.json({ success: false, message: "Passwords do not match" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(req.body.password, salt);
+
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+
+        await user.save();
+
+        res.json({ success: true, message: "Password updated successfully" });
+
+    } catch (error) {
+        console.log(error);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+export { loginUser, registerUser, adminLogin, getUserProfile, updateUserProfile, changeUserPassword, forgotPassword, resetPassword };
