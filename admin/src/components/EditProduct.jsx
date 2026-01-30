@@ -9,6 +9,7 @@ const EditProduct = ({ product, onClose, refresh }) => {
     name: product.name,
     price: product.price,
     category: product.category,
+    subCategory: product.subCategory,
   });
 
   const [newImages, setNewImages] = useState([]);
@@ -19,12 +20,13 @@ const EditProduct = ({ product, onClose, refresh }) => {
 
   const handleSubmit = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("adminToken");
 
       const formData = new FormData();
       formData.append("name", form.name);
       formData.append("price", form.price);
       formData.append("category", form.category);
+      formData.append("subCategory", form.subCategory);
 
       newImages.forEach((file) => {
         formData.append("images", file);
@@ -33,7 +35,7 @@ const EditProduct = ({ product, onClose, refresh }) => {
       const res = await axios.put(
         `${backendUrl}/api/product/update/${product._id}`,
         formData,
-        { headers: { token } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (res.data.success) {
@@ -129,6 +131,23 @@ const EditProduct = ({ product, onClose, refresh }) => {
               <option>Men</option>
               <option>Women</option>
               <option>Kids</option>
+            </select>
+          </div>
+
+          {/* SUB CATEGORY */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type (Sub Category)
+            </label>
+            <select
+              name="subCategory"
+              value={form.subCategory}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option>Topwear</option>
+              <option>Bottomwear</option>
+              <option>Winterwear</option>
             </select>
           </div>
         </div>

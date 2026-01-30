@@ -21,6 +21,11 @@ const AdminContextProvider = ({ children }) => {
         return;
     }
 
+    // Check if we already have a valid connection to reuse
+    // Note: We can't really reuse 'socket' state here easily without ref, 
+    // but the effect dependency [token] ensures we only run when token changes.
+    // If we have strict mode double-mount, we want to ensure we disconnect previous.
+
     try {
         const decoded = jwtDecode(token);
         const adminId = decoded.id;
@@ -28,6 +33,7 @@ const AdminContextProvider = ({ children }) => {
         // Initialize socket
         const newSocket = io(SOCKET_URL, {
             transports: ["websocket", "polling"],
+            forceNew: false // Try to reuse connection if possible
         });
 
         newSocket.on("connect", () => {
@@ -37,17 +43,18 @@ const AdminContextProvider = ({ children }) => {
 
         newSocket.on("disconnect", () => {
             console.log("❌ Admin Socket Disconnected");
+            setSocket(null); // Clear state on disconnect
         });
 
         // Global Listeners
         newSocket.on("newOrder", (data) => {
              console.log("🔔 New order global:", data);
-             
         });
 
         setSocket(newSocket);
 
         return () => {
+            console.log("🧹 Cleanup Admin Socket");
             newSocket.disconnect();
         };
     } catch (error) {

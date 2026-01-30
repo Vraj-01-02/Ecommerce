@@ -198,6 +198,7 @@ const Add = () => {
             >
               <option>Topwear</option>
               <option>Bottomwear</option>
+              <option>Winterwear</option>
             </select>
           </div>
 
