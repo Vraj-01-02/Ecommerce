@@ -164,9 +164,10 @@ const changeUserPassword = async(req, res) => {
 }
 
 const forgotPassword = async (req, res) => {
+    let user;
     try {
         const { email } = req.body;
-        const user = await userModel.findOne({ email });
+        user = await userModel.findOne({ email });
 
         if (!user) {
             return res.json({ success: false, message: "User not found" });
@@ -231,11 +232,13 @@ const forgotPassword = async (req, res) => {
         res.json({ success: true, message: `Email sent to ${user.email}` });
 
     } catch (error) {
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpire = undefined;
-        await user.save();
-        console.log(error);
-        res.json({ success: false, message: error.message });
+        if (user) {
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpire = undefined;
+            await user.save();
+        }
+        console.error("Email send error:", error); // Detailed logging
+        res.status(500).json({ success: false, message: "Email could not be sent. Check server logs." });
     }
 }
 
