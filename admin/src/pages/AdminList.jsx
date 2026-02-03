@@ -67,42 +67,67 @@ const AdminList = () => {
       ) : admins.length === 0 ? (
         <p className="text-gray-500">No admins found.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b text-left text-sm text-gray-600">
-                <th className="py-2">Name</th>
-                <th className="py-2">Email</th>
-                <th className="py-2">Role</th>
-                <th className="py-2 text-right">Action</th>
-              </tr>
-            </thead>
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          {/* HEADER (Desktop Only) */}
+          <div className="hidden md:grid grid-cols-[1fr_2fr_1fr_0.5fr] items-center bg-gray-100 px-4 py-2 text-sm font-bold text-gray-700 border-b">
+            <div>Name</div>
+            <div>Email</div>
+            <div>Role</div>
+            <div className="text-center">Action</div>
+          </div>
 
-            <tbody>
-              {admins.map((admin) => (
-                <tr
-                  key={admin._id}
-                  className="border-b text-sm hover:bg-gray-50"
-                >
-                  <td className="py-2">{admin.name}</td>
-                  <td className="py-2">{admin.email}</td>
-                  <td className="py-2 font-medium">{admin.role}</td>
-                  <td className="py-2 text-right">
-                    {admin.role !== "SuperAdmin" && (
-                      <button
-                        onClick={() => handleDelete(admin._id)}
-                        disabled={deletingId === admin._id}
-                        className="text-red-600 hover:text-red-800 disabled:opacity-50"
-                        title="Delete Admin"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* ROWS */}
+          <div className="flex flex-col divide-y divide-gray-200">
+            {admins.map((admin) => (
+              <div
+                key={admin._id}
+                className="flex flex-col md:grid md:grid-cols-[1fr_2fr_1fr_0.5fr] items-center px-4 py-3 text-sm hover:bg-gray-50 transition"
+              >
+                {/* Name */}
+                <div className="font-medium text-gray-900 md:font-normal">
+                  {admin.name}
+                </div>
+
+                {/* Email */}
+                <div className="text-gray-600 break-all md:break-normal">
+                  {admin.email}
+                </div>
+
+                {/* Role */}
+                <div className="mt-1 md:mt-0">
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${
+                      admin.role === "SuperAdmin"
+                        ? "bg-purple-100 text-purple-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {admin.role === "SuperAdmin"
+                      ? "Super Admin"
+                      : admin.permissions?.includes("products")
+                      ? "Product Admin"
+                      : admin.permissions?.includes("orders")
+                      ? "Order Admin"
+                      : "Admin"}
+                  </span>
+                </div>
+
+                {/* Action */}
+                 <div className="flex justify-end md:justify-center w-full md:w-auto mt-2 md:mt-0">
+                  {admin.role !== "SuperAdmin" && (
+                    <button
+                      onClick={() => handleDelete(admin._id)}
+                      disabled={deletingId === admin._id}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                      title="Delete Admin"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
