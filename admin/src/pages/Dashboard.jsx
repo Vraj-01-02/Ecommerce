@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useContext } from "react";
 import api from "../utils/api";
 import { currency } from "../App";
 import { jwtDecode } from "jwt-decode";
+import { AdminContext } from "../context/AdminContext";
 import {
   ShoppingBag,
   CheckCircle,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 const Dashboard = () => {
+  const { socket } = useContext(AdminContext);
   const [role, setRole] = useState(null);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -124,8 +126,21 @@ const Dashboard = () => {
   }, [fetchData]);
 
   /* ================= REAL-TIME UPDATES ================= */
-  // Socket connection handled by NotificationBell component in Navbar
-  // Dashboard will auto-refresh when user interacts with notifications
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+        fetchData();
+    };
+
+    socket.on("newOrder", handleUpdate);
+    socket.on("orderStatusUpdate", handleUpdate);
+
+    return () => {
+        socket.off("newOrder", handleUpdate);
+        socket.off("orderStatusUpdate", handleUpdate);
+    };
+  }, [socket, fetchData]);
 
   if (loading) return null;
 
@@ -134,7 +149,7 @@ const Dashboard = () => {
     permissions.length === 1 && permissions.includes("products");
 
   return (
-    <div className="flex-1 px-6 py-6 bg-linear-to-br from-indigo-50 via-white to-purple-50">
+    <div className="flex-1 px-3 sm:px-6 py-6 bg-linear-to-br from-indigo-50 via-white to-purple-50">
       <h2 className="text-2xl font-semibold text-gray-900 mb-8">
         Dashboard Overview
       </h2>
