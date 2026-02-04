@@ -204,7 +204,7 @@ const forgotPassword = async (req, res) => {
                     <p>If you didn't request a password reset, you can safely ignore this email.</p>
                 </div>
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #888; font-size: 12px;">
-                    <p>&copy; ${new Date().getFullYear()} Forever. All rights reserved.</p>
+                    <p>&copy; ${new Date().getFullYear()} Fabric. All rights reserved.</p>
                 </div>
             </div>
         `;
