@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
+import { Link } from "react-router-dom";
 import api from "../utils/api";
 
 const Login = ({ setToken }) => {
@@ -85,6 +86,14 @@ const Login = ({ setToken }) => {
               placeholder="••••••••"
               required
             />
+            <div className="flex justify-end mt-1">
+              <Link 
+                to="/admin/forgot-password" 
+                className="text-xs text-gray-500 hover:text-indigo-600 hover:underline transition-colors duration-200"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button
