@@ -1,9 +1,8 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { ShopContext } from "../context/ShopContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import StarRating from "./StarRating";
-import { assets } from "../assets/assets";
 
 const ReviewSection = ({ product, fetchProductData }) => {
   const { backendUrl, token } = useContext(ShopContext);
@@ -12,6 +11,12 @@ const ReviewSection = ({ product, fetchProductData }) => {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  
+  // 🔥 NEW: Eligibility state
+  const [eligibility, setEligibility] = useState(null);
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState(null);
 
   // Calculate Breakdown
   const totalReviews = product.numReviews || 0;
@@ -23,8 +28,44 @@ const ReviewSection = ({ product, fetchProductData }) => {
     });
   }
 
+  // 🔥 CHECK ELIGIBILITY when user is logged in
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (!token) {
+        setEligibility(null);
+        return;
+      }
+
+      try {
+        setCheckingEligibility(true);
+        const response = await axios.get(
+          `${backendUrl}/api/product/${product._id}/reviews/eligibility`,
+          { headers: { token } }
+        );
+
+        if (response.data.success) {
+          setEligibility(response.data);
+          
+          // If user already reviewed, pre-fill form for editing
+          if (response.data.hasReviewed && response.data.existingReview) {
+            setRating(response.data.existingReview.rating);
+            setComment(response.data.existingReview.comment || "");
+            setEditingReviewId(response.data.existingReview.id);
+          }
+        }
+      } catch (error) {
+        console.error("Eligibility check error:", error);
+      } finally {
+        setCheckingEligibility(false);
+      }
+    };
+
+    checkEligibility();
+  }, [token, product._id, backendUrl]);
+
   const handleSubmitReview = async (e) => {
     e.preventDefault();
+    
     if (!token) {
       toast.error("Please login to write a review");
       return;
@@ -32,27 +73,104 @@ const ReviewSection = ({ product, fetchProductData }) => {
 
     try {
       setSubmitting(true);
-      const response = await axios.post(
-        backendUrl + "/api/product/reviews",
-        { rating, comment, productId: product._id },
-        { headers: { token } }
-      );
+      
+      let response;
+      
+      if (isEditMode && editingReviewId) {
+        // 🔥 EDIT EXISTING REVIEW
+        response = await axios.put(
+          `${backendUrl}/api/product/reviews/${editingReviewId}`,
+          { rating, comment, productId: product._id },
+          { headers: { token } }
+        );
+      } else {
+        // 🔥 ADD NEW REVIEW
+        response = await axios.post(
+          `${backendUrl}/api/product/reviews`,
+          { rating, comment, productId: product._id },
+          { headers: { token } }
+        );
+      }
 
       if (response.data.success) {
-        toast.success("Review Added");
+        toast.success(response.data.message);
         setComment("");
         setRating(5);
         setShowForm(false);
+        setIsEditMode(false);
         await fetchProductData();
+        
+        // Refresh eligibility
+        const eligibilityResponse = await axios.get(
+          `${backendUrl}/api/product/${product._id}/reviews/eligibility`,
+          { headers: { token } }
+        );
+        if (eligibilityResponse.data.success) {
+          setEligibility(eligibilityResponse.data);
+        }
       } else {
         toast.error(response.data.message);
       }
     } catch (error) {
       console.error(error);
-      toast.error(error.message);
+      const errorMsg = error.response?.data?.message || error.message;
+      toast.error(errorMsg);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleWriteReviewClick = () => {
+    if (!token) {
+      toast.error("Please login to write a review");
+      return;
+    }
+
+    if (eligibility?.hasReviewed) {
+      // Edit mode
+      setIsEditMode(true);
+      setShowForm(true);
+    } else if (eligibility?.canReview) {
+      // New review mode
+      setIsEditMode(false);
+      setRating(5);
+      setComment("");
+      setShowForm(true);
+    } else {
+      // Not eligible
+      toast.error(eligibility?.reason || "You cannot review this product");
+    }
+  };
+
+  const handleCancelReview = () => {
+    setShowForm(false);
+    setIsEditMode(false);
+    
+    // Reset to existing review if editing
+    if (eligibility?.hasReviewed && eligibility?.existingReview) {
+      setRating(eligibility.existingReview.rating);
+      setComment(eligibility.existingReview.comment || "");
+    } else {
+      setRating(5);
+      setComment("");
+    }
+  };
+
+  // 🔥 SMART BUTTON TEXT
+  const getButtonText = () => {
+    if (!token) return "Login to Review";
+    if (checkingEligibility) return "Checking...";
+    if (eligibility?.hasReviewed) return "Edit Your Review";
+    if (eligibility?.canReview) return "Write a Review";
+    return "Write a Review";
+  };
+
+  const getButtonDisabled = () => {
+    if (!token) return false; // Allow click to show login message
+    if (checkingEligibility) return true;
+    if (!eligibility) return true;
+    // Button is enabled if user can review OR has already reviewed (for editing)
+    return !eligibility.canReview && !eligibility.hasReviewed;
   };
 
   return (
@@ -100,12 +218,27 @@ const ReviewSection = ({ product, fetchProductData }) => {
             })}
           </div>
 
+          {/* 🔥 SMART BUTTON: Shows different text based on eligibility */}
           <button
-            onClick={() => setShowForm(!showForm)}
-            className="w-full mt-6 bg-transparent border-2 border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition-colors"
+            onClick={handleWriteReviewClick}
+            disabled={getButtonDisabled()}
+            className={`w-full mt-6 border-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+              getButtonDisabled()
+                ? "border-gray-300 text-gray-400 cursor-not-allowed"
+                : "border-indigo-600 text-indigo-600 hover:bg-indigo-50"
+            }`}
           >
-            {showForm ? "Cancel Review" : "Write a Review"}
+            {getButtonText()}
           </button>
+
+          {/* 🔥 ELIGIBILITY MESSAGE: Show why user can't review */}
+          {token && eligibility && !eligibility.canReview && !eligibility.hasReviewed && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <span className="font-semibold">ⓘ</span> {eligibility.reason}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: REVIEWS LIST & FORM */}
@@ -116,7 +249,9 @@ const ReviewSection = ({ product, fetchProductData }) => {
               onSubmit={handleSubmitReview}
               className="mb-10 bg-gray-50 p-6 rounded-xl border border-gray-200 animate-fade-in"
             >
-              <h4 className="text-lg font-bold mb-4">Share you experience</h4>
+              <h4 className="text-lg font-bold mb-4">
+                {isEditMode ? "Edit your review" : "Share your experience"}
+              </h4>
               
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
@@ -137,24 +272,34 @@ const ReviewSection = ({ product, fetchProductData }) => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Review</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Review (Optional)</label>
                 <textarea
                   className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
                   rows="4"
-                  placeholder="What did you like or dislike?"
-                  required
+                  placeholder="What did you like or dislike? (Optional - you can submit stars only)"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
+                  maxLength={500}
                 ></textarea>
+                <p className="text-xs text-gray-400 mt-1">{comment.length}/500 characters</p>
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium shadow-md hover:bg-indigo-700 disabled:bg-gray-400 transition-all"
-              >
-                {submitting ? "Posting..." : "Submit Review"}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium shadow-md hover:bg-indigo-700 disabled:bg-gray-400 transition-all"
+                >
+                  {submitting ? "Saving..." : (isEditMode ? "Update Review" : "Submit Review")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelReview}
+                  className="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-medium hover:bg-gray-300 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           )}
 
@@ -190,7 +335,9 @@ const ReviewSection = ({ product, fetchProductData }) => {
                         {new Date(review.date).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+                  <p className="text-gray-700 leading-relaxed">
+                    {review.comment || <em className="text-gray-400">No written review</em>}
+                  </p>
                 </div>
               ))
             ) : (
