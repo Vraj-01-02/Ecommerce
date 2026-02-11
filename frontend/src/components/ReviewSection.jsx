@@ -1,18 +1,18 @@
 import React, { useState, useContext, useEffect } from "react";
 import { ShopContext } from "../context/ShopContext";
-import axios from "axios";
+import userApi from "../utils/userApi";
 import { toast } from "react-toastify";
 import StarRating from "./StarRating";
 
 const ReviewSection = ({ product, fetchProductData }) => {
-  const { backendUrl, token } = useContext(ShopContext);
+  const { token } = useContext(ShopContext);
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   
-  // 🔥 NEW: Eligibility state
+  //  NEW: Eligibility state
   const [eligibility, setEligibility] = useState(null);
   const [checkingEligibility, setCheckingEligibility] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -38,9 +38,8 @@ const ReviewSection = ({ product, fetchProductData }) => {
 
       try {
         setCheckingEligibility(true);
-        const response = await axios.get(
-          `${backendUrl}/api/product/${product._id}/reviews/eligibility`,
-          { headers: { token } }
+        const response = await userApi.get(
+          `/api/product/${product._id}/reviews/eligibility`
         );
 
         if (response.data.success) {
@@ -61,7 +60,7 @@ const ReviewSection = ({ product, fetchProductData }) => {
     };
 
     checkEligibility();
-  }, [token, product._id, backendUrl]);
+  }, [token, product._id]);
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
@@ -78,17 +77,15 @@ const ReviewSection = ({ product, fetchProductData }) => {
       
       if (isEditMode && editingReviewId) {
         // 🔥 EDIT EXISTING REVIEW
-        response = await axios.put(
-          `${backendUrl}/api/product/reviews/${editingReviewId}`,
-          { rating, comment, productId: product._id },
-          { headers: { token } }
+        response = await userApi.put(
+          `/api/product/reviews/${editingReviewId}`,
+          { rating, comment, productId: product._id }
         );
       } else {
         // 🔥 ADD NEW REVIEW
-        response = await axios.post(
-          `${backendUrl}/api/product/reviews`,
-          { rating, comment, productId: product._id },
-          { headers: { token } }
+        response = await userApi.post(
+          `/api/product/reviews`,
+          { rating, comment, productId: product._id }
         );
       }
 
@@ -101,9 +98,8 @@ const ReviewSection = ({ product, fetchProductData }) => {
         await fetchProductData();
         
         // Refresh eligibility
-        const eligibilityResponse = await axios.get(
-          `${backendUrl}/api/product/${product._id}/reviews/eligibility`,
-          { headers: { token } }
+        const eligibilityResponse = await userApi.get(
+          `/api/product/${product._id}/reviews/eligibility`
         );
         if (eligibilityResponse.data.success) {
           setEligibility(eligibilityResponse.data);
