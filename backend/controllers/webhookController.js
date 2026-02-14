@@ -122,7 +122,8 @@ async function handleCheckoutSessionCompleted(session) {
         });
 
         // 🔥 REAL-TIME NOTIFICATIONS via Socket.IO
-        emitToUser(order.userId.toString(), "paymentSuccess", {
+        // Emit to user - payment confirmation
+        emitToUser(order.userId.toString(), "orderConfirmed", {
             orderId: order._id,
             orderNumber: order._id.toString().slice(-6),
             amount: order.amount,
@@ -130,11 +131,15 @@ async function handleCheckoutSessionCompleted(session) {
             timestamp: new Date(),
         });
 
-        emitToAdmins("paymentReceived", {
+        // Emit to admin - use newOrder for consistency with COD orders
+        emitToAdmins("newOrder", {
             orderId: order._id,
             orderNumber: order._id.toString().slice(-6),
             amount: order.amount,
-            customer: `${order.address.firstName} ${order.address.lastName}`,
+            customer: order.address?.firstName && order.address?.lastName 
+                ? `${order.address.firstName} ${order.address.lastName}`
+                : "Customer",
+            paymentMethod: "Stripe",
             timestamp: new Date(),
         });
 
