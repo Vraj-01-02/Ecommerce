@@ -10,6 +10,9 @@ export const initSocket = (server) => {
             credentials: true,
             methods: ["GET", "POST"],
         },
+        pingTimeout: 60000,
+        pingInterval: 25000,
+        connectTimeout: 45000,
     });
 
     /* ================= CONNECTION HANDLER ================= */

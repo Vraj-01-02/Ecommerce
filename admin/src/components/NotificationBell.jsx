@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { Bell, ShoppingBag, CreditCard, Package } from "lucide-react";
 import { toast } from "react-toastify";
-import useSocket from "../hooks/useSocket";
+import { AdminContext } from "../context/AdminContext";
 import { currency } from "../App";
 import { useNavigate } from "react-router-dom";
 
@@ -11,9 +11,19 @@ const NotificationBell = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+  const { socket } = useContext(AdminContext);
+  const processedOrdersRef = useRef(new Set());
 
   // Handle new order notification
   const handleNewOrder = (data) => {
+    // Prevent duplicate notifications
+    if (processedOrdersRef.current.has(data.orderId.toString())) {
+      console.log("⚠️ Duplicate notification prevented for order:", data.orderNumber);
+      return;
+    }
+
+    processedOrdersRef.current.add(data.orderId.toString());
+
     const notification = {
       id: Date.now(),
       type: "newOrder",
@@ -34,10 +44,27 @@ const NotificationBell = () => {
       const audio = new Audio("/notification.mp3");
       audio.play().catch(() => {});
     } catch (e) {}
+
+    // Show toast notification
+    toast.success(`New ${data.paymentMethod} order from ${data.customer}`, {
+      position: "top-right",
+      autoClose: 3000,
+    });
   };
 
-  // Initialize socket
-  useSocket(handleNewOrder);
+  // Listen to socket events
+  useEffect(() => {
+    if (!socket) return;
+
+    console.log("🔔 NotificationBell listening to socket events");
+
+    socket.on("newOrder", handleNewOrder);
+
+    return () => {
+      console.log("🧹 NotificationBell cleaning up socket listeners");
+      socket.off("newOrder", handleNewOrder);
+    };
+  }, [socket]);
 
   // Mark all as read when dropdown opens
   const handleDropdownToggle = () => {
