@@ -1,38 +1,13 @@
-import { useContext, useEffect, useRef } from "react";
+import { useContext } from "react";
 import { AdminContext } from "../context/AdminContext";
 
-const useSocket = (onNewOrder, onOrderUpdate) => {
+/**
+ * Admin socket hook - simplified to just return socket from context
+ * Components should handle their own event listeners
+ * This prevents duplicate listener issues
+ */
+const useSocket = () => {
     const { socket } = useContext(AdminContext);
-    
-    // Refs to keep callbacks stable
-    const onNewOrderRef = useRef(onNewOrder);
-    const onOrderUpdateRef = useRef(onOrderUpdate);
-
-    useEffect(() => {
-        onNewOrderRef.current = onNewOrder;
-        onOrderUpdateRef.current = onOrderUpdate;
-    }, [onNewOrder, onOrderUpdate]);
-
-    useEffect(() => {
-        if (!socket) return;
-
-        const handleNewOrder = (data) => {
-            if (onNewOrderRef.current) onNewOrderRef.current(data);
-        };
-
-        const handleOrderUpdate = (data) => {
-             if (onOrderUpdateRef.current) onOrderUpdateRef.current(data);
-        };
-
-        socket.on("newOrder", handleNewOrder);
-        socket.on("orderStatusUpdate", handleOrderUpdate);
-
-        return () => {
-            socket.off("newOrder", handleNewOrder);
-            socket.off("orderStatusUpdate", handleOrderUpdate);
-        };
-    }, [socket]);
-
     return socket;
 };
 
