@@ -130,7 +130,15 @@ const placeOrderStripe = async(req, res) => {
             cancel_url: `${origin}/verify?success=false&orderId=${newOrder._id}`,
             line_items,
             mode: "payment",
+            // 💳 Add metadata for webhook reconciliation
+            metadata: {
+                orderId: newOrder._id.toString(),
+            },
         });
+
+        // 💳 SAVE SESSION ID FOR WEBHOOK (Critical!)
+        newOrder.stripeSessionId = session.id;
+        await newOrder.save();
 
         res.json({ success: true, session_url: session.url });
     } catch (error) {

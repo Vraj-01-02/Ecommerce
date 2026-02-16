@@ -133,6 +133,25 @@ export const changeAdminPassword = async(req, res) => {
             });
         }
 
+        // 🔒 STRONG PASSWORD VALIDATION
+        if (newPassword.length < 12) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 12 characters long",
+            });
+        }
+        
+        const hasUpperCase = /[A-Z]/.test(newPassword);
+        const hasLowerCase = /[a-z]/.test(newPassword);
+        const hasNumber = /[0-9]/.test(newPassword);
+        
+        if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must contain uppercase, lowercase, and number",
+            });
+        }
+
         admin.password = newPassword;
         await admin.save();
 
@@ -377,7 +396,8 @@ export const adminForgotPassword = async(req, res) => {
         await admin.save();
 
         // Create Reset URL
-        const resetUrl = `http://localhost:5174/admin/reset-password/${resetToken}`;
+        // 🔒 USE ENVIRONMENT VARIABLE FOR URL
+        const resetUrl = `${process.env.ADMIN_URL}/admin/reset-password/${resetToken}`;
 
         const emailTemplate = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
