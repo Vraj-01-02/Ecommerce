@@ -28,7 +28,11 @@ const orderSchema = new mongoose.Schema({
     paymentMethod: String,
     payment: Boolean,
     status: { type: String, default: "Order Placed" },
-    date: Number
+    date: Number,
+    
+    // 💳 Stripe Integration Fields (for webhook reconciliation)
+    stripeSessionId: String,        // Checkout session ID
+    stripePaymentIntentId: String   // Payment intent ID (for refunds/disputes)
 });
 
 const orderModel = mongoose.model("Order", orderSchema);

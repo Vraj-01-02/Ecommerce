@@ -4,11 +4,19 @@ const notificationSchema = new mongoose.Schema({
     title: { type: String, required: true },
     message: { type: String, required: true },
 
-    // 🔥 ROLE BASED TARGETING
+    // 🔥 ROLE BASED TARGETING (for admin notifications)
     forRole: {
         type: String,
         enum: ["admin"],
-        required: true,
+        required: false, // Made optional to support user notifications
+        index: true,
+    },
+
+    // 🔥 USER TARGETING (for user-specific notifications)
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: false, // Optional - either forRole OR userId must be present
         index: true,
     },
 
