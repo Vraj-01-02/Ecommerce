@@ -15,7 +15,7 @@ const LatestCollection = () => {
 
     const bottomWear = products
       .filter(item => item.subCategory === 'Bottomwear')
-      .slice(0, 3) // 👈 sirf 3 bottom wear
+      .slice(0, 3)
 
     return [...upperWear, ...bottomWear].slice(0, 10)
   }, [products])
@@ -25,8 +25,7 @@ const LatestCollection = () => {
       <div className='text-center py-8 text-3xl'>
         <Title text1="LATEST" text2="COLLECTIONS" />
         <p className='w-3/4 m-auto text-xs sm:text-sm md:text-base text-gray-600'>
-          Explore our latest upper wear styles with a few handpicked bottom wear
-          options to complete your look.
+          Explore our latest upper wear styles with a few handpicked bottom wear options to complete your look.
         </p>
       </div>
 
