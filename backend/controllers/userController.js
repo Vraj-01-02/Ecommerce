@@ -46,8 +46,24 @@ const registerUser = async(req, res) => {
         if (!validator.isEmail(email)) {
             return res.json({ success: false, message: "Please enter a valid email" });
         }
-        if (password.length < 8) {
-            return res.json({ success: false, message: "Please enter a strong password" });
+        // 🔒 STRONG PASSWORD VALIDATION (12+ chars, complexity required)
+        if (password.length < 12) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Password must be at least 12 characters long" 
+            });
+        }
+        
+        // Check password complexity
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        
+        if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Password must contain uppercase, lowercase, and number" 
+            });
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -67,21 +83,7 @@ const registerUser = async(req, res) => {
     }
 }
 
-// Route for admin login
-const adminLogin = async(req, res) => {
-    try {
-        const { email, password } = req.body;
-        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign(email + password, process.env.JWT_SECRET, { expiresIn: '30d' });
-            res.json({ success: true, token });
-        } else {
-            res.json({ success: false, message: "Invalid credentials  " });
-        }
-    } catch (error) {
-        console.log(error);
-        res.json({ success: false, message: error.message });
-    }
-}
+// Legacy admin login removed - Use proper admin system in adminController.js instead
 
 // Get user profile
 const getUserProfile = async(req, res) => {
@@ -147,8 +149,23 @@ const changeUserPassword = async(req, res) => {
             return res.json({ success: false, message: "Current password is incorrect" });
         }
 
-        if (newPassword.length < 8) {
-            return res.json({ success: false, message: "Password must be at least 8 characters long" });
+        // 🔒 STRONG PASSWORD VALIDATION
+        if (newPassword.length < 12) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Password must be at least 12 characters long" 
+            });
+        }
+        
+        const hasUpperCase = /[A-Z]/.test(newPassword);
+        const hasLowerCase = /[a-z]/.test(newPassword);
+        const hasNumber = /[0-9]/.test(newPassword);
+        
+        if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Password must contain uppercase, lowercase, and number" 
+            });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -186,7 +203,8 @@ const forgotPassword = async (req, res) => {
 
         // Create Reset URL
         // adjust localhost:5173 to your frontend URL
-        const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+        // 🔒 USE ENVIRONMENT VARIABLE FOR URL
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
         const emailTemplate = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
@@ -277,4 +295,4 @@ const resetPassword = async (req, res) => {
     }
 }
 
-export { loginUser, registerUser, adminLogin, getUserProfile, updateUserProfile, changeUserPassword, forgotPassword, resetPassword };
+export { loginUser, registerUser, getUserProfile, updateUserProfile, changeUserPassword, forgotPassword, resetPassword };
