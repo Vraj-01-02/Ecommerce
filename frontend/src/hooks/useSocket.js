@@ -3,10 +3,12 @@ import { io } from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
 
 const SOCKET_URL = "http://localhost:4000";
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 const useSocket = (onOrderUpdate) => {
     const socketRef = useRef(null);
     const onOrderUpdateRef = useRef(onOrderUpdate);
+    const reconnectAttemptsRef = useRef(0);
 
     // Keep ref in sync with latest callback
     useEffect(() => {
@@ -27,9 +29,15 @@ const useSocket = (onOrderUpdate) => {
             const decoded = jwtDecode(token);
             const userId = decoded.id;
 
+            console.log("🔌 Initializing User Socket...");
+
             // Initialize socket connection
             socketRef.current = io(SOCKET_URL, {
                 transports: ["websocket", "polling"],
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
             });
 
             const socket = socketRef.current;
@@ -38,10 +46,24 @@ const useSocket = (onOrderUpdate) => {
             socket.on("connect", () => {
                 console.log("✅ Socket connected:", socket.id);
                 socket.emit("joinUser", userId);
+                reconnectAttemptsRef.current = 0; // Reset on successful connection
             });
 
-            socket.on("disconnect", () => {
-                console.log("❌ Socket disconnected");
+            socket.on("disconnect", (reason) => {
+                console.log("❌ Socket disconnected:", reason);
+                if (reason === "io server disconnect") {
+                    // Server disconnected us, try to reconnect
+                    socket.connect();
+                }
+            });
+
+            socket.on("connect_error", (error) => {
+                reconnectAttemptsRef.current++;
+                console.error(`❌ Socket connection error (attempt ${reconnectAttemptsRef.current}):`, error.message);
+                
+                if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+                    console.error("🚫 Max reconnection attempts reached");
+                }
             });
 
             // Listen for order confirmation - use ref to get latest callback
